@@ -72,7 +72,13 @@ BlockTrans/
 
 ## ⚙️ 环境变量配置
 
-在 Cloudflare Pages 项目设置中配置以下环境变量：
+**重要**：部署后必须在 Cloudflare Pages 项目设置中配置以下环境变量，否则翻译功能将无法正常工作。
+
+### 配置步骤
+
+1. 登录 [Cloudflare Dashboard](https://dash.cloudflare.com/)
+2. 进入 Pages 项目 → Settings → Environment variables
+3. 分别为 Production 和 Preview 环境添加以下变量
 
 ### 生产环境 (Production)
 
@@ -80,11 +86,17 @@ BlockTrans/
 |--------|------|--------|
 | `API_URL` | AI API 端点地址 | `https://api.openai.com/v1/chat/completions` |
 | `MODEL_NAME` | 使用的模型名称 | `gpt-3.5-turbo` |
-| `API_KEY` | API 密钥 | `sk-...` |
+| `API_KEY` | API 密钥（加密存储） | `sk-...` |
 
 ### 预览环境 (Preview)
 
 建议使用与生产环境相同的配置，或者使用测试用的 API 密钥。
+
+### 支持的 AI 服务
+
+- **OpenAI**: `https://api.openai.com/v1/chat/completions`
+- **Azure OpenAI**: `https://your-resource.openai.azure.com/openai/deployments/your-deployment/chat/completions?api-version=2023-05-15`
+- **其他兼容 OpenAI API 的服务**
 
 ## 🛠️ 技术栈
 
@@ -149,11 +161,32 @@ BlockTrans/
 - [Cloudflare Pages](https://pages.cloudflare.com/) - 现代化的 JAMstack 平台
 - [Vite](https://vitejs.dev/) - 下一代前端构建工具
 
-## 📞 支持
+## � 故障排除
+
+### 常见部署问题
+
+1. **构建失败**
+   - 确保使用 Node.js 22+ 版本
+   - 检查依赖安装：`pnpm install`
+
+2. **部署失败**
+   - 确认 GitHub Secrets 已正确设置
+   - 检查 Cloudflare API Token 权限
+
+3. **翻译功能不工作**
+   - 确认环境变量已在 Cloudflare Pages 中设置
+   - 检查 API 密钥是否有效
+   - 验证 API_URL 格式是否正确
+
+4. **wrangler 部署错误**
+   - 确保项目名称在 Cloudflare 中唯一
+   - 检查 `wrangler.toml` 配置
+
+## �📞 支持
 
 如果你在使用过程中遇到问题，请：
 
-1. 查看 [Issues](https://github.com/your-username/BlockTrans/issues) 中是否有类似问题
+1. 查看 [Issues](https://github.com/XingQiu2307/BlockTrans/issues) 中是否有类似问题
 2. 创建新的 Issue 描述你的问题
 3. 提供详细的错误信息和复现步骤
 
