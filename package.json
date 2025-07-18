@@ -1,22 +1,40 @@
 {
-  "name": "fronted",
+  "name": "blocktrans",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "description": "AI-powered Minecraft .lang file translator for Bedrock Edition",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/BlockTrans.git"
+  },
+  "keywords": [
+    "minecraft",
+    "translation",
+    "ai",
+    "bedrock",
+    "lang"
+  ],
+  "author": "BlockTrans Contributors",
+  "license": "MIT",
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "wrangler pages deploy dist",
+    "pages:dev": "wrangler pages dev dist"
   },
   "dependencies": {
     "crypto-js": "^4.2.0",
     "vue": "^3.5.17"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250718.0",
     "@vitejs/plugin-vue": "^6.0.0",
     "@vue/tsconfig": "^0.7.0",
     "typescript": "~5.8.3",
     "vite": "^7.0.4",
-    "vue-tsc": "^2.2.12"
+    "vue-tsc": "^2.2.12",
+    "wrangler": "^4.25.0"
   }
 }

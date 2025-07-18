@@ -1,0 +1,32 @@
+name = "blocktrans"
+compatibility_date = "2024-01-01"
+
+[env.production]
+compatibility_date = "2024-01-01"
+
+[env.production.vars]
+# Environment variables for production
+# These should be set in Cloudflare Pages dashboard
+# API_URL = "https://api.openai.com/v1/chat/completions"
+# MODEL_NAME = "gpt-3.5-turbo"
+# API_KEY = "your-api-key-here"
+
+[env.preview]
+compatibility_date = "2024-01-01"
+
+[env.preview.vars]
+# Environment variables for preview/staging
+# These should be set in Cloudflare Pages dashboard
+# API_URL = "https://api.openai.com/v1/chat/completions"
+# MODEL_NAME = "gpt-3.5-turbo"
+# API_KEY = "your-api-key-here"
+
+# Build configuration for Cloudflare Pages
+[build]
+command = "pnpm run build"
+cwd = "."
+publish = "dist"
+
+# Pages Functions configuration
+[pages]
+functions_dir = "functions"
