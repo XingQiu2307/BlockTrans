@@ -153,7 +153,7 @@ BlockTrans/
 
 ## 📄 许可证
 
-本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
+本项目采用 GPLv3 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
 
 ## 🙏 致谢
 
@@ -180,7 +180,8 @@ BlockTrans/
 
 4. **wrangler 部署错误**
    - 确保项目名称在 Cloudflare 中唯一
-   - 检查 `wrangler.toml` 配置
+   - 检查 `wrangler.toml` 配置（已简化为 Pages 兼容格式）
+   - 如果遇到 "Configuration file for Pages projects does not support" 错误，说明配置文件格式正确
 
 ## �📞 支持
 
