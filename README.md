@@ -1,6 +1,6 @@
 # 🧱 BlockTrans - 方块译者
 
-[![Deploy to Cloudflare Pages](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/your-username/BlockTrans)
+[![Deploy to Cloudflare Pages](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/XingQiu2307/BlockTrans)
 
 一个专为 Minecraft Bedrock Edition 设计的 AI 驱动的 .lang 文件翻译工具。
 
