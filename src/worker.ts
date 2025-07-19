@@ -1436,7 +1436,7 @@ function createSimpleZip(files: Array<{name: string, data: Uint8Array}>): Uint8A
 }
 
 // 统计相关函数
-async function recordPageVisit(env: Env): Promise<void> {
+async function recordPageVisit(_env: Env): Promise<void> {
   try {
     // 使用 Cloudflare KV 存储统计数据（如果可用）
     // 这里使用简单的内存统计，实际部署时可以考虑使用 KV 或其他持久化存储
@@ -1446,7 +1446,7 @@ async function recordPageVisit(env: Env): Promise<void> {
   }
 }
 
-async function recordTranslation(env: Env, type: 'lang' | 'zip', count: number): Promise<void> {
+async function recordTranslation(_env: Env, type: 'lang' | 'zip', count: number): Promise<void> {
   try {
     console.log(`Translation recorded: type=${type}, count=${count}`);
   } catch (error) {
@@ -1454,7 +1454,7 @@ async function recordTranslation(env: Env, type: 'lang' | 'zip', count: number):
   }
 }
 
-async function handleStatsAPI(env: Env, corsHeaders: Record<string, string>): Promise<Response> {
+async function handleStatsAPI(_env: Env, corsHeaders: Record<string, string>): Promise<Response> {
   try {
     // 返回模拟的统计数据
     // 在实际部署中，这些数据应该从 KV 存储或数据库中获取
