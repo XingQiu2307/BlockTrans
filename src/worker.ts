@@ -385,94 +385,66 @@ const HTML_CONTENT = (function(): string {
     </footer>
 
     <script>
-        // @ts-nocheck
         console.log('Script starting...');
 
-        const uploadArea = document.getElementById('uploadArea');
-        const fileInput = document.getElementById('fileInput');
-        const loading = document.getElementById('loading');
-        const result = document.getElementById('result');
+        // 获取DOM元素
+        var uploadArea = document.getElementById('uploadArea');
+        var fileInput = document.getElementById('fileInput');
+        var loading = document.getElementById('loading');
+        var result = document.getElementById('result');
 
-        console.log('Elements found:', {
-            uploadArea: !!uploadArea,
-            fileInput: !!fileInput,
-            loading: !!loading,
-            result: !!result
-        });
+        console.log('Elements found:', uploadArea, fileInput, loading, result);
 
-        // 拖拽上传
-        if (uploadArea) {
-            uploadArea.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                uploadArea.classList.add('dragover');
-            });
-
-            uploadArea.addEventListener('dragleave', () => {
-                uploadArea.classList.remove('dragover');
-            });
-
-            uploadArea.addEventListener('drop', (e) => {
-                e.preventDefault();
-                uploadArea.classList.remove('dragover');
-                console.log('File dropped');
-                const files = e.dataTransfer.files;
-                if (files && files.length > 0) {
-                    console.log('Calling handleFile from drop event');
-                    handleFile(files[0]);
-                }
-            });
-        } else {
-            console.error('uploadArea element not found for drag events');
-        }
-
-        // 点击上传区域或选择文件按钮
-        const selectFileBtn = document.getElementById('selectFileBtn');
-
-        function triggerFileSelect() {
-            console.log('Triggering file select');
+        // 简单的文件选择功能
+        function openFileDialog() {
+            console.log('Opening file dialog...');
             if (fileInput) {
                 fileInput.click();
             } else {
-                console.error('fileInput element not found');
+                console.error('fileInput not found');
             }
         }
 
-        // 简化事件处理 - 直接绑定到上传区域
+        // 绑定点击事件
         if (uploadArea) {
-            uploadArea.addEventListener('click', (e) => {
-                console.log('Upload area clicked, target:', e.target.tagName, e.target.id);
-                triggerFileSelect();
-            });
+            uploadArea.addEventListener('click', openFileDialog);
+            console.log('Click event bound to uploadArea');
         } else {
-            console.error('uploadArea element not found');
+            console.error('uploadArea not found');
         }
 
-        // 如果选择文件按钮存在，也绑定事件（作为备用）
+        // 选择文件按钮
+        var selectFileBtn = document.getElementById('selectFileBtn');
         if (selectFileBtn) {
-            selectFileBtn.addEventListener('click', (e) => {
+            selectFileBtn.addEventListener('click', function(e) {
                 e.stopPropagation();
                 console.log('Select file button clicked');
-                triggerFileSelect();
+                openFileDialog();
             });
+            console.log('Click event bound to selectFileBtn');
         } else {
-            console.error('selectFileBtn element not found');
+            console.error('selectFileBtn not found');
         }
 
         // 文件选择
         if (fileInput) {
-            fileInput.addEventListener('change', (e) => {
+            fileInput.addEventListener('change', function(e) {
                 console.log('File input changed');
                 if (e.target.files && e.target.files.length > 0) {
-                    console.log('Calling handleFile from file input');
-                    handleFile(e.target.files[0]);
+                    console.log('File selected:', e.target.files[0].name);
+                    alert('文件已选择: ' + e.target.files[0].name);
                 } else {
                     console.log('No files selected');
                 }
             });
+            console.log('Change event bound to fileInput');
         } else {
             console.error('fileInput element not found for change event');
         }
 
+        console.log('Basic script setup complete');
+
+        /*
         // 处理文件
         async function handleFile(file) {
             console.log('handleFile called with:', file.name, file.size, 'bytes');
@@ -1135,7 +1107,7 @@ const HTML_CONTENT = (function(): string {
                 }, 300);
             }, 3000);
         }
-
+        */
 
     </script>
 </body>
