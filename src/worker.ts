@@ -362,14 +362,8 @@ const HTML_CONTENT = `<!DOCTYPE html>
             </div>
 
             <div class="footer-info">
-                <div id="statsDisplay" style="margin: 15px 0; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 8px;">
-                    <h4 style="color: #667eea; margin-bottom: 10px;">📊 使用统计</h4>
-                    <div style="display: flex; justify-content: center; gap: 30px; flex-wrap: wrap; font-size: 0.9rem; align-items: center;">
-                        <span>👥 访问人数: <img src="https://count.getloli.com/@访问人数?name=访问人数&theme=minecraft&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto" alt="访问统计" style="vertical-align: middle; margin-left: 5px;"></span>
-                        <span>🔄 翻译次数: <img src="https://count.getloli.com/@翻译次数?name=翻译次数&theme=minecraft&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto" alt="翻译统计" style="vertical-align: middle; margin-left: 5px;"></span>
-                        <span>📄 单文件: <img src="https://count.getloli.com/@单文件翻译?name=单文件翻译&theme=minecraft&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto" alt="单文件统计" style="vertical-align: middle; margin-left: 5px;"></span>
-                        <span>📦 附加包: <img src="https://count.getloli.com/@附加包翻译?name=附加包翻译&theme=minecraft&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto" alt="附加包统计" style="vertical-align: middle; margin-left: 5px;"></span>
-                    </div>
+                <div id="statsDisplay" style="margin: 15px 0; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 8px; text-align: center;">
+                    <span style="font-size: 0.9rem; color: #667eea;">👥 访问人数: <img src="https://count.getloli.com/@访问人数?name=访问人数&theme=minecraft&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto" alt="访问统计" style="vertical-align: middle; margin-left: 5px;"></span>
                 </div>
                 <p><strong>作者:</strong> XingQiu2307 | <strong>技术支持:</strong> Vibe Coding</p>
                 <p>本项目采用 GPL-3.0 开源协议 | © 2025 BlockTrans</p>
@@ -492,20 +486,10 @@ const HTML_CONTENT = `<!DOCTYPE html>
 
                 if (type === 'zip') {
                     // ZIP 文件响应处理
-                    if (response.headers.get('content-type')?.includes('application/zip')) {
-                        // 直接下载 ZIP 文件
-                        const blob = await response.blob();
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = 'translated_addon.zip';
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                        URL.revokeObjectURL(url);
-
-                        showNotification('✅ 翻译完成！附加包已下载', 'success');
-                        result.innerHTML = '<div style="text-align: center; padding: 40px; color: #10b981;"><h3>🎉 翻译完成！</h3><p>翻译后的附加包已自动下载</p></div>';
+                    if (response.headers.get('content-type')?.includes('application/json')) {
+                        // 返回翻译结果供编辑
+                        const zipResult = await response.json();
+                        displayZipResults(zipResult);
                         return;
                     } else {
                         // 错误响应
@@ -752,6 +736,106 @@ const HTML_CONTENT = `<!DOCTYPE html>
             showNotification('✅ 文件下载成功！', 'success');
         }
 
+        // 显示 ZIP 翻译结果
+        function displayZipResults(zipResult) {
+            let html = '<div class="zip-results">';
+            html += '<h3>📦 附加包翻译结果</h3>';
+            html += '<p style="color: #666; margin-bottom: 20px;">请检查并编辑翻译结果，确认后将重新打包为附加包</p>';
+
+            // 为每个翻译文件创建编辑区域
+            zipResult.translatedFiles.forEach((file, fileIndex) => {
+                html += '<div class="file-section" style="margin-bottom: 30px; border: 1px solid #ddd; border-radius: 8px; padding: 20px;">';
+                html += '<h4 style="color: #667eea; margin-bottom: 15px;">📄 ' + file.path + '</h4>';
+                html += '<div class="translation-grid">';
+
+                file.translations.forEach((item, index) => {
+                    html += '<div class="translation-item">';
+                    html += '<div class="translation-key">' + escapeHtml(item.key) + '</div>';
+                    html += '<div class="translation-source">' + escapeHtml(item.source) + '</div>';
+                    html += '<input type="text" class="translation-input" data-file="' + fileIndex + '" data-index="' + index + '" value="' + escapeHtml(item.translation) + '">';
+                    html += '</div>';
+                });
+
+                html += '</div></div>';
+            });
+
+            html += '<div class="action-buttons">';
+            html += '<button onclick="downloadZipResult()" class="download-btn">📦 下载翻译后的附加包</button>';
+            html += '</div>';
+            html += '</div>';
+
+            result.innerHTML = html;
+
+            // 保存 ZIP 结果数据到全局变量
+            window.currentZipResult = zipResult;
+        }
+
+        // 下载 ZIP 翻译结果
+        async function downloadZipResult() {
+            if (!window.currentZipResult) {
+                showNotification('❌ 没有可下载的翻译结果', 'error');
+                return;
+            }
+
+            try {
+                showNotification('📦 正在重新打包附加包...', 'info');
+
+                // 收集用户编辑后的翻译内容
+                const updatedFiles = window.currentZipResult.translatedFiles.map((file, fileIndex) => {
+                    let updatedContent = '';
+                    file.translations.forEach((item, index) => {
+                        const input = document.querySelector('[data-file="' + fileIndex + '"][data-index="' + index + '"]');
+                        const translation = input ? input.value : item.translation;
+                        updatedContent += item.key + '=' + translation + '\\n';
+                    });
+
+                    return {
+                        path: file.path,
+                        translatedContent: updatedContent
+                    };
+                });
+
+                // 调用重新打包 API
+                const response = await fetch('/api/repack-zip', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        originalFileName: window.currentZipResult.originalFileName,
+                        originalFileExtension: window.currentZipResult.originalFileExtension,
+                        translatedFiles: updatedFiles,
+                        zipData: window.currentZipResult.zipData
+                    })
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = response.headers.get('content-disposition')?.split('filename=')[1]?.replace(/"/g, '') || 'translated_addon.zip';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+
+                    showNotification('✅ 翻译后的附加包已下载！', 'success');
+                } else {
+                    const errorData = await response.json();
+                    showNotification('❌ 重新打包失败: ' + errorData.error, 'error');
+                }
+            } catch (error) {
+                console.error('Download ZIP result error:', error);
+                showNotification('❌ 下载失败: ' + error.message, 'error');
+            }
+        }
+
+        // HTML 转义函数
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
         // 显示通知
         function showNotification(message, type = 'info') {
             const notification = document.createElement('div');
@@ -824,6 +908,11 @@ export default {
     // API 路由：ZIP 文件翻译接口
     if (pathname === '/api/translate-zip' && request.method === 'POST') {
       return handleTranslateZipAPI(request, env, corsHeaders);
+    }
+
+    // API 路由：重新打包 ZIP 文件
+    if (pathname === '/api/repack-zip' && request.method === 'POST') {
+      return handleRepackZipAPI(request, env, corsHeaders);
     }
 
 
@@ -1109,8 +1198,25 @@ async function handleTranslateZipAPI(request: Request, env: Env, corsHeaders: Re
       }
     }
 
-    // 重新打包为 ZIP，保留原有文件结构
-    const newZipData = await createZipWithTranslations(zipData, translatedFiles);
+    // 准备翻译结果数据，包含原始 ZIP 信息
+    const result = {
+      originalFileName: file.name,
+      originalFileExtension: file.name.split('.').pop()?.toLowerCase() || 'zip',
+      translatedFiles: translatedFiles.map(f => ({
+        path: f.path,
+        originalContent: langFiles.find(lf => lf.path === f.path)?.content || '',
+        translatedContent: f.content,
+        translations: parseLangFile(f.content).map((item, index) => {
+          const originalItem = parseLangFile(langFiles.find(lf => lf.path === f.path)?.content || '')[index];
+          return {
+            key: item.key,
+            source: originalItem?.value || '',
+            translation: item.value
+          };
+        })
+      })),
+      zipData: Array.from(zipData) // 保存原始 ZIP 数据用于重新打包
+    };
 
     // 统计翻译次数
     const totalTranslations = translatedFiles.reduce((sum, file) => {
@@ -1118,11 +1224,10 @@ async function handleTranslateZipAPI(request: Request, env: Env, corsHeaders: Re
     }, 0);
     await recordTranslation(env, 'zip', totalTranslations);
 
-    return new Response(newZipData, {
+    return new Response(JSON.stringify(result), {
       headers: {
         ...corsHeaders,
-        'Content-Type': 'application/zip',
-        'Content-Disposition': 'attachment; filename="translated_addon.zip"'
+        'Content-Type': 'application/json'
       }
     });
 
@@ -1568,6 +1673,57 @@ function createSimpleZip(files: Array<{name: string, data: Uint8Array}>): Uint8A
   return result;
 }
 
+// 处理重新打包 ZIP 文件 API
+async function handleRepackZipAPI(request: Request, env: Env, corsHeaders: Record<string, string>): Promise<Response> {
+  try {
+    const requestData = await request.json();
+    const { originalFileName, originalFileExtension, translatedFiles, zipData } = requestData;
+
+    if (!zipData || !translatedFiles) {
+      return new Response(JSON.stringify({
+        error: 'Missing required data for repackaging'
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // 重建原始 ZIP 数据
+    const originalZipData = new Uint8Array(zipData);
+
+    // 准备翻译后的文件，重命名为 zh_CN.lang
+    const finalTranslatedFiles = translatedFiles.map((file: any) => ({
+      path: file.path.replace(/\/[^\/]+\.lang$/, '/zh_CN.lang'),
+      content: file.translatedContent
+    }));
+
+    // 重新打包
+    const newZipData = await createZipWithTranslations(originalZipData, finalTranslatedFiles);
+
+    // 确定输出文件名和扩展名
+    const outputExtension = originalFileExtension || 'zip';
+    const outputFileName = `translated_${originalFileName.replace(/\.[^.]+$/, '')}.${outputExtension}`;
+
+    return new Response(newZipData, {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/zip',
+        'Content-Disposition': `attachment; filename="${outputFileName}"`
+      }
+    });
+
+  } catch (error) {
+    console.error('Repack ZIP failed:', error);
+    return new Response(JSON.stringify({
+      error: 'Failed to repack ZIP file',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+}
+
 // 统计相关函数
 async function recordPageVisit(_env: Env): Promise<void> {
   try {
@@ -1586,31 +1742,7 @@ async function recordPageVisit(_env: Env): Promise<void> {
 
 async function recordTranslation(_env: Env, type: 'lang' | 'zip', count: number): Promise<void> {
   try {
-    // 调用第三方统计服务
-    const promises = [
-      fetch('https://count.getloli.com/@翻译次数?name=翻译次数&theme=minecraft&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto', {
-        method: 'GET',
-        headers: { 'User-Agent': 'BlockTrans/1.0' }
-      })
-    ];
-
-    if (type === 'lang') {
-      promises.push(
-        fetch('https://count.getloli.com/@单文件翻译?name=单文件翻译&theme=minecraft&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto', {
-          method: 'GET',
-          headers: { 'User-Agent': 'BlockTrans/1.0' }
-        })
-      );
-    } else if (type === 'zip') {
-      promises.push(
-        fetch('https://count.getloli.com/@附加包翻译?name=附加包翻译&theme=minecraft&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto', {
-          method: 'GET',
-          headers: { 'User-Agent': 'BlockTrans/1.0' }
-        })
-      );
-    }
-
-    await Promise.all(promises);
+    // 简化统计，不再记录翻译次数
     console.log(`Translation recorded: type=${type}, count=${count}`);
   } catch (error) {
     console.error('Failed to record translation:', error);
