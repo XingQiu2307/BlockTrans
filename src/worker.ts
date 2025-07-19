@@ -1,12 +1,12 @@
 /// <reference types="@cloudflare/workers-types" />
 
+import { unzip, zip, strFromU8, strToU8 } from 'fflate';
+
 interface Env {
   API_URL: string;
   MODEL_NAME: string;
   API_KEY: string;
 }
-
-// 移除自定义的 DecompressionStream 类型定义，使用内置的
 
 // 简化版本：直接返回基本的 HTML 页面
 const HTML_CONTENT = `<!DOCTYPE html>
@@ -736,7 +736,7 @@ const HTML_CONTENT = `<!DOCTYPE html>
             let content = '';
 
             translations.forEach(item => {
-                content += item.key + '=' + item.translation + '\\n';
+                content += item.key + '=' + item.translation + '\n';
             });
 
             return content;
@@ -830,7 +830,7 @@ const HTML_CONTENT = `<!DOCTYPE html>
                     file.translations.forEach((item, index) => {
                         const input = document.querySelector('[data-file="' + fileIndex + '"][data-index="' + index + '"]');
                         const translation = input ? input.value : item.translation;
-                        updatedContent += item.key + '=' + translation + '\\n';
+                        updatedContent += item.key + '=' + translation + '\n';
                     });
 
                     return {
@@ -1387,453 +1387,164 @@ Translations:`;
   return prompt;
 }
 
-// 从 ZIP 数据中提取 .lang 文件
+// 使用 fflate 从 ZIP 数据中提取 .lang 文件
 async function extractLangFilesFromZip(zipData: Uint8Array): Promise<Array<{path: string, content: string}>> {
   const langFiles: Array<{path: string, content: string}> = [];
 
-  console.log('Starting ZIP extraction, data length:', zipData.length);
+  console.log('Starting ZIP extraction with fflate, data length:', zipData.length);
 
-  try {
-    // 简单的 ZIP 文件解析（仅支持基本的 ZIP 格式）
-    const view = new DataView(zipData.buffer);
-    let offset = 0;
-
-    // 查找中央目录结构
-    const centralDirSignature = 0x06054b50;
-    let centralDirOffset = -1;
-
-    console.log('Searching for central directory...');
-
-    // 从文件末尾开始查找中央目录
-    for (let i = zipData.length - 22; i >= 0; i--) {
-      if (view.getUint32(i, true) === centralDirSignature) {
-        centralDirOffset = view.getUint32(i + 16, true);
-        console.log('Found central directory at offset:', centralDirOffset);
-        break;
-      }
-    }
-
-    if (centralDirOffset === -1) {
-      console.error('Central directory not found');
-      throw new Error('Invalid ZIP file: Central directory not found');
-    }
-
-    // 解析中央目录条目
-    offset = centralDirOffset;
-    const centralDirSignature2 = 0x02014b50;
-
-    console.log('Parsing central directory entries...');
-    let fileCount = 0;
-
-    while (offset < zipData.length - 22) {
-      const signature = view.getUint32(offset, true);
-      if (signature !== centralDirSignature2) break;
-
-      const filenameLength = view.getUint16(offset + 28, true);
-      const extraFieldLength = view.getUint16(offset + 30, true);
-      const commentLength = view.getUint16(offset + 32, true);
-      const localHeaderOffset = view.getUint32(offset + 42, true);
-
-      // 读取文件名
-      const filenameBytes = zipData.slice(offset + 46, offset + 46 + filenameLength);
-      const filename = new TextDecoder().decode(filenameBytes);
-
-      fileCount++;
-      console.log(`File ${fileCount}: ${filename}`);
-
-      // 检查是否是 .lang 文件且在 texts 目录下
-      if (filename.toLowerCase().endsWith('.lang') &&
-          (filename.includes('texts/') || filename.includes('texts\\'))) {
-
-        console.log('Found .lang file:', filename);
-
-        // 读取文件内容
-        const fileContent = await extractFileFromZip(zipData, localHeaderOffset);
-        if (fileContent) {
-          console.log('Successfully extracted content for:', filename, 'Length:', fileContent.length);
-          langFiles.push({
-            path: filename,
-            content: fileContent
-          });
-        } else {
-          console.error('Failed to extract content for:', filename);
+  return new Promise((resolve, reject) => {
+    try {
+      // 使用 fflate 解压 ZIP 文件
+      unzip(zipData, (err, unzipped) => {
+        if (err) {
+          console.error('fflate unzip error:', err);
+          reject(new Error('Failed to unzip file: ' + err.message));
+          return;
         }
-      }
 
-      offset += 46 + filenameLength + extraFieldLength + commentLength;
-    }
+        console.log('Successfully unzipped, found files:', Object.keys(unzipped).length);
 
-    console.log('Total files processed:', fileCount);
+        // 遍历所有文件
+        for (const [filePath, fileData] of Object.entries(unzipped)) {
+          console.log('Processing file:', filePath);
 
-  } catch (error) {
-    console.error('ZIP parsing error:', error);
-    // 如果 ZIP 解析失败，尝试简单的文本搜索
-    const zipText = new TextDecoder('utf-8', { fatal: false }).decode(zipData);
-    const langMatches = zipText.match(/[^=\n]*=[^=\n]*\n/g);
+          // 检查是否是 .lang 文件且在 texts 目录下
+          if (filePath.toLowerCase().endsWith('.lang') &&
+              (filePath.includes('texts/') || filePath.includes('texts\\'))) {
 
-    if (langMatches && langMatches.length > 10) {
-      // 看起来像是 .lang 文件内容
-      langFiles.push({
-        path: 'extracted.lang',
-        content: langMatches.join('')
+            console.log('Found .lang file:', filePath);
+
+            try {
+              // 将 Uint8Array 转换为字符串
+              const content = strFromU8(fileData);
+              console.log('Successfully extracted content for:', filePath, 'Length:', content.length);
+
+              langFiles.push({
+                path: filePath,
+                content: content
+              });
+            } catch (decodeError) {
+              console.error('Failed to decode file:', filePath, decodeError);
+            }
+          }
+        }
+
+        console.log('Total .lang files found:', langFiles.length);
+        resolve(langFiles);
       });
+    } catch (error) {
+      console.error('ZIP extraction error:', error);
+      reject(error);
     }
-  }
-
-  return langFiles;
+  });
 }
 
-// 从 ZIP 数据中提取所有文件
+// 使用 fflate 从 ZIP 数据中提取所有文件
 async function extractAllFilesFromZip(zipData: Uint8Array): Promise<Array<{name: string, data: Uint8Array}>> {
-  const allFiles: Array<{name: string, data: Uint8Array}> = [];
+  return new Promise((resolve, reject) => {
+    try {
+      unzip(zipData, (err: any, unzipped: any) => {
+        if (err) {
+          console.error('fflate unzip error:', err);
+          reject(new Error('Failed to unzip file: ' + err.message));
+          return;
+        }
 
-  try {
-    const view = new DataView(zipData.buffer);
-    let offset = 0;
+        const allFiles: Array<{name: string, data: Uint8Array}> = [];
 
-    // 查找中央目录结构
-    const centralDirSignature = 0x06054b50;
-    let centralDirOffset = -1;
+        // 遍历所有文件
+        for (const [filePath, fileData] of Object.entries(unzipped)) {
+          if (!filePath.endsWith('/')) {
+            // 只添加文件，不添加目录
+            allFiles.push({
+              name: filePath,
+              data: fileData as Uint8Array
+            });
+          }
+        }
 
-    // 从文件末尾开始查找中央目录
-    for (let i = zipData.length - 22; i >= 0; i--) {
-      if (view.getUint32(i, true) === centralDirSignature) {
-        centralDirOffset = view.getUint32(i + 16, true);
-        break;
-      }
-    }
-
-    if (centralDirOffset === -1) {
-      throw new Error('Invalid ZIP file: Central directory not found');
-    }
-
-    // 解析中央目录条目
-    offset = centralDirOffset;
-    const centralDirSignature2 = 0x02014b50;
-
-    while (offset < zipData.length - 22) {
-      const signature = view.getUint32(offset, true);
-      if (signature !== centralDirSignature2) break;
-
-      const filenameLength = view.getUint16(offset + 28, true);
-      const extraFieldLength = view.getUint16(offset + 30, true);
-      const commentLength = view.getUint16(offset + 32, true);
-      const localHeaderOffset = view.getUint32(offset + 42, true);
-
-      // 读取文件名
-      const filenameBytes = zipData.slice(offset + 46, offset + 46 + filenameLength);
-      const filename = new TextDecoder().decode(filenameBytes);
-
-      // 提取文件数据
-      const fileData = await extractFileDataFromZip(zipData, localHeaderOffset);
-      if (fileData && filename && !filename.endsWith('/')) {
-        // 只添加文件，不添加目录
-        allFiles.push({
-          name: filename,
-          data: fileData
-        });
-      }
-
-      offset += 46 + filenameLength + extraFieldLength + commentLength;
-    }
-
-  } catch (error) {
-    console.error('ZIP parsing error:', error);
-  }
-
-  return allFiles;
-}
-
-// 从 ZIP 中提取单个文件的二进制数据
-async function extractFileDataFromZip(zipData: Uint8Array, localHeaderOffset: number): Promise<Uint8Array | null> {
-  try {
-    const view = new DataView(zipData.buffer);
-    const localSignature = 0x04034b50;
-
-    if (view.getUint32(localHeaderOffset, true) !== localSignature) {
-      return null;
-    }
-
-    const filenameLength = view.getUint16(localHeaderOffset + 26, true);
-    const extraFieldLength = view.getUint16(localHeaderOffset + 28, true);
-    const compressedSize = view.getUint32(localHeaderOffset + 18, true);
-    const compressionMethod = view.getUint16(localHeaderOffset + 8, true);
-
-    const dataOffset = localHeaderOffset + 30 + filenameLength + extraFieldLength;
-    const fileData = zipData.slice(dataOffset, dataOffset + compressedSize);
-
-    if (compressionMethod === 0) {
-      // 无压缩
-      return fileData;
-    } else if (compressionMethod === 8) {
-      // Deflate 压缩 - 暂时返回原始数据
-      console.log('Compressed file detected, returning raw data');
-      return fileData;
-    } else {
-      // 其他压缩方法，返回原始数据
-      return fileData;
-    }
-  } catch (error) {
-    console.error('File extraction error:', error);
-    return null;
-  }
-}
-
-// 从 ZIP 中提取单个文件内容（文本）
-async function extractFileFromZip(zipData: Uint8Array, localHeaderOffset: number): Promise<string | null> {
-  try {
-    const view = new DataView(zipData.buffer);
-    const localSignature = 0x04034b50;
-
-    console.log('Extracting file at offset:', localHeaderOffset);
-
-    if (view.getUint32(localHeaderOffset, true) !== localSignature) {
-      console.error('Invalid local header signature at offset:', localHeaderOffset);
-      return null;
-    }
-
-    const filenameLength = view.getUint16(localHeaderOffset + 26, true);
-    const extraFieldLength = view.getUint16(localHeaderOffset + 28, true);
-    const compressedSize = view.getUint32(localHeaderOffset + 18, true);
-    const compressionMethod = view.getUint16(localHeaderOffset + 8, true);
-
-    console.log('File info:', { filenameLength, extraFieldLength, compressedSize, compressionMethod });
-
-    const dataOffset = localHeaderOffset + 30 + filenameLength + extraFieldLength;
-    const fileData = zipData.slice(dataOffset, dataOffset + compressedSize);
-
-    console.log('Data offset:', dataOffset, 'Data length:', fileData.length);
-
-    if (compressionMethod === 0) {
-      // 无压缩
-      const content = new TextDecoder().decode(fileData);
-      console.log('Extracted content preview:', content.substring(0, 100));
-      return content;
-    } else if (compressionMethod === 8) {
-      // Deflate 压缩 - 最常见的 ZIP 压缩方法
-      console.log('File is compressed with Deflate method');
-
-      // 暂时返回一个友好的错误信息，建议用户使用无压缩的 ZIP
-      return `# 压缩文件暂不支持
-# 检测到您的附加包使用了压缩格式
-# 为了确保最佳兼容性，请使用以下方法：
-#
-# 1. 重新创建 ZIP 文件时选择"存储"模式（无压缩）
-# 2. 或者直接上传单个 .lang 文件进行翻译
-#
-# 示例内容：
-entity.minecraft.pig.name=猪
-entity.minecraft.cow.name=牛
-item.minecraft.apple.name=苹果
-
-# 请将上述内容替换为您需要翻译的实际内容`;
-
-      // TODO: 未来版本将添加完整的解压缩支持
-      /*
-      try {
-        const stream = new DecompressionStream('deflate');
-        // ... 解压缩逻辑
-      } catch (error) {
-        // 解压缩失败的处理
-      }
-      */
-    } else {
-      // 其他压缩方法
-      console.log('Unsupported compression method:', compressionMethod);
-      try {
-        const content = new TextDecoder().decode(fileData);
-        console.log('Raw content preview:', content.substring(0, 100));
-        return content;
-      } catch (decodeError) {
-        console.error('Failed to decode file:', decodeError);
-        return null;
-      }
-    }
-  } catch (error) {
-    console.error('File extraction error:', error);
-    return null;
-  }
-}
-
-// 创建包含翻译文件的新 ZIP，保留原有文件结构
-async function createZipWithTranslations(originalZipData: Uint8Array, translatedFiles: Array<{path: string, content: string}>): Promise<Uint8Array> {
-  try {
-    // 解析原始 ZIP 文件，提取所有文件
-    const originalFiles = await extractAllFilesFromZip(originalZipData);
-
-    // 创建翻译文件的映射
-    const translationMap = new Map<string, string>();
-    for (const file of translatedFiles) {
-      translationMap.set(file.path, file.content);
-    }
-
-    // 准备新的文件列表
-    const newFiles: Array<{name: string, data: Uint8Array}> = [];
-
-    // 遍历原始文件，替换翻译文件，保留其他文件
-    for (const originalFile of originalFiles) {
-      if (translationMap.has(originalFile.name)) {
-        // 使用翻译后的内容
-        newFiles.push({
-          name: originalFile.name,
-          data: new TextEncoder().encode(translationMap.get(originalFile.name)!)
-        });
-      } else {
-        // 保留原始文件
-        newFiles.push(originalFile);
-      }
-    }
-
-    // 添加新的翻译文件（如果原文件中没有对应的文件）
-    for (const file of translatedFiles) {
-      const exists = originalFiles.some(f => f.name === file.path);
-      if (!exists) {
-        newFiles.push({
-          name: file.path,
-          data: new TextEncoder().encode(file.content)
-        });
-      }
-    }
-
-    // 创建新的 ZIP 文件
-    return createSimpleZip(newFiles);
-  } catch (error) {
-    console.error('Error creating ZIP with translations:', error);
-    // 如果处理失败，回退到简单模式
-    const files: Array<{name: string, data: Uint8Array}> = [];
-    for (const file of translatedFiles) {
-      files.push({
-        name: file.path,
-        data: new TextEncoder().encode(file.content)
+        console.log('Extracted all files:', allFiles.length);
+        resolve(allFiles);
       });
+    } catch (error) {
+      console.error('ZIP extraction error:', error);
+      reject(error);
     }
-    return createSimpleZip(files);
-  }
+  });
 }
 
-// 计算 CRC32 校验和
-function calculateCRC32(data: Uint8Array): number {
-  const crcTable = new Array(256);
-  for (let i = 0; i < 256; i++) {
-    let c = i;
-    for (let j = 0; j < 8; j++) {
-      c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+// 旧的 ZIP 处理函数已被 fflate 替代
+
+// 旧的文件提取函数已被 fflate 替代
+
+// 使用 fflate 创建包含翻译文件的新 ZIP，保留原有文件结构
+async function createZipWithTranslations(originalZipData: Uint8Array, translatedFiles: Array<{path: string, content: string}>): Promise<Uint8Array> {
+  return new Promise((resolve, reject) => {
+    try {
+      console.log('Creating ZIP with translations using fflate');
+
+      // 首先解压原始 ZIP 文件
+      unzip(originalZipData, (err: any, unzipped: any) => {
+        if (err) {
+          console.error('Failed to unzip original file:', err);
+          reject(new Error('Failed to unzip original file: ' + err.message));
+          return;
+        }
+
+        console.log('Original ZIP extracted, files:', Object.keys(unzipped).length);
+
+        // 创建翻译文件的映射
+        const translationMap = new Map<string, string>();
+        for (const file of translatedFiles) {
+          translationMap.set(file.path, file.content);
+        }
+
+        // 准备新的文件数据
+        const newZipData: { [path: string]: Uint8Array } = {};
+
+        // 遍历原始文件，替换翻译文件，保留其他文件
+        for (const [filePath, fileData] of Object.entries(unzipped)) {
+          if (translationMap.has(filePath)) {
+            // 使用翻译后的内容
+            console.log('Replacing file with translation:', filePath);
+            newZipData[filePath] = strToU8(translationMap.get(filePath)!);
+          } else {
+            // 保留原始文件
+            newZipData[filePath] = fileData as Uint8Array;
+          }
+        }
+
+        // 添加新的翻译文件（如果原文件中没有对应的文件）
+        for (const file of translatedFiles) {
+          if (!unzipped[file.path]) {
+            console.log('Adding new translation file:', file.path);
+            newZipData[file.path] = strToU8(file.content);
+          }
+        }
+
+        console.log('Preparing to zip', Object.keys(newZipData).length, 'files');
+
+        // 重新打包为 ZIP
+        zip(newZipData, (zipErr: any, zipped: Uint8Array) => {
+          if (zipErr) {
+            console.error('Failed to create ZIP:', zipErr);
+            reject(new Error('Failed to create ZIP: ' + zipErr.message));
+            return;
+          }
+
+          console.log('Successfully created new ZIP, size:', zipped.length);
+          resolve(zipped);
+        });
+      });
+    } catch (error) {
+      console.error('Error creating ZIP with translations:', error);
+      reject(error);
     }
-    crcTable[i] = c;
-  }
-
-  let crc = 0 ^ (-1);
-  for (let i = 0; i < data.length; i++) {
-    crc = (crc >>> 8) ^ crcTable[(crc ^ data[i]) & 0xFF];
-  }
-  return (crc ^ (-1)) >>> 0;
+  });
 }
 
-// 创建简单的 ZIP 文件
-function createSimpleZip(files: Array<{name: string, data: Uint8Array}>): Uint8Array {
-  const zipParts: Uint8Array[] = [];
-  const centralDir: Uint8Array[] = [];
-  let offset = 0;
-
-  for (const file of files) {
-    // 计算 CRC32
-    const crc32 = calculateCRC32(file.data);
-
-    // 本地文件头
-    const localHeader = new ArrayBuffer(30 + file.name.length);
-    const localView = new DataView(localHeader);
-
-    localView.setUint32(0, 0x04034b50, true); // 本地文件头签名
-    localView.setUint16(4, 20, true); // 版本
-    localView.setUint16(6, 0, true); // 标志
-    localView.setUint16(8, 0, true); // 压缩方法（无压缩）
-    localView.setUint16(10, 0, true); // 时间
-    localView.setUint16(12, 0, true); // 日期
-    localView.setUint32(14, crc32, true); // CRC32
-    localView.setUint32(18, file.data.length, true); // 压缩大小
-    localView.setUint32(22, file.data.length, true); // 未压缩大小
-    localView.setUint16(26, file.name.length, true); // 文件名长度
-    localView.setUint16(28, 0, true); // 额外字段长度
-
-    const nameBytes = new TextEncoder().encode(file.name);
-    const localHeaderBytes = new Uint8Array(localHeader);
-    const localHeaderWithName = new Uint8Array(localHeaderBytes.length + nameBytes.length);
-    localHeaderWithName.set(localHeaderBytes);
-    localHeaderWithName.set(nameBytes, localHeaderBytes.length);
-
-    zipParts.push(localHeaderWithName);
-    zipParts.push(file.data);
-
-    // 中央目录条目
-    const centralHeader = new ArrayBuffer(46 + file.name.length);
-    const centralView = new DataView(centralHeader);
-
-    centralView.setUint32(0, 0x02014b50, true); // 中央目录签名
-    centralView.setUint16(4, 20, true); // 版本
-    centralView.setUint16(6, 20, true); // 最小版本
-    centralView.setUint16(8, 0, true); // 标志
-    centralView.setUint16(10, 0, true); // 压缩方法
-    centralView.setUint16(12, 0, true); // 时间
-    centralView.setUint16(14, 0, true); // 日期
-    centralView.setUint32(16, crc32, true); // CRC32
-    centralView.setUint32(20, file.data.length, true); // 压缩大小
-    centralView.setUint32(24, file.data.length, true); // 未压缩大小
-    centralView.setUint16(28, file.name.length, true); // 文件名长度
-    centralView.setUint16(30, 0, true); // 额外字段长度
-    centralView.setUint16(32, 0, true); // 注释长度
-    centralView.setUint16(34, 0, true); // 磁盘号
-    centralView.setUint16(36, 0, true); // 内部属性
-    centralView.setUint32(38, 0, true); // 外部属性
-    centralView.setUint32(42, offset, true); // 本地头偏移
-
-    const centralHeaderBytes = new Uint8Array(centralHeader);
-    const centralHeaderWithName = new Uint8Array(centralHeaderBytes.length + nameBytes.length);
-    centralHeaderWithName.set(centralHeaderBytes);
-    centralHeaderWithName.set(nameBytes, centralHeaderBytes.length);
-
-    centralDir.push(centralHeaderWithName);
-
-    offset += localHeaderWithName.length + file.data.length;
-  }
-
-  // 计算总大小
-  const centralDirSize = centralDir.reduce((sum, dir) => sum + dir.length, 0);
-
-  // 中央目录结束记录
-  const endRecord = new ArrayBuffer(22);
-  const endView = new DataView(endRecord);
-
-  endView.setUint32(0, 0x06054b50, true); // 结束记录签名
-  endView.setUint16(4, 0, true); // 磁盘号
-  endView.setUint16(6, 0, true); // 中央目录磁盘号
-  endView.setUint16(8, files.length, true); // 本磁盘条目数
-  endView.setUint16(10, files.length, true); // 总条目数
-  endView.setUint32(12, centralDirSize, true); // 中央目录大小
-  endView.setUint32(16, offset, true); // 中央目录偏移
-  endView.setUint16(20, 0, true); // 注释长度
-
-  // 组合所有部分
-  const totalSize = offset + centralDirSize + 22;
-  const result = new Uint8Array(totalSize);
-  let pos = 0;
-
-  // 添加文件数据
-  for (const part of zipParts) {
-    result.set(part, pos);
-    pos += part.length;
-  }
-
-  // 添加中央目录
-  for (const dir of centralDir) {
-    result.set(dir, pos);
-    pos += dir.length;
-  }
-
-  // 添加结束记录
-  result.set(new Uint8Array(endRecord), pos);
-
-  return result;
-}
+// 旧的 ZIP 创建函数已被 fflate 替代
 
 // 处理重新打包 ZIP 文件 API
 async function handleRepackZipAPI(request: Request, _env: Env, corsHeaders: Record<string, string>): Promise<Response> {
