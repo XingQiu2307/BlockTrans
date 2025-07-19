@@ -1674,9 +1674,14 @@ function createSimpleZip(files: Array<{name: string, data: Uint8Array}>): Uint8A
 }
 
 // 处理重新打包 ZIP 文件 API
-async function handleRepackZipAPI(request: Request, env: Env, corsHeaders: Record<string, string>): Promise<Response> {
+async function handleRepackZipAPI(request: Request, _env: Env, corsHeaders: Record<string, string>): Promise<Response> {
   try {
-    const requestData = await request.json();
+    const requestData = await request.json() as {
+      originalFileName: string;
+      originalFileExtension: string;
+      translatedFiles: Array<{path: string, translatedContent: string}>;
+      zipData: number[];
+    };
     const { originalFileName, originalFileExtension, translatedFiles, zipData } = requestData;
 
     if (!zipData || !translatedFiles) {
