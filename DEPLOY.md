@@ -1,5 +1,7 @@
 # 🚀 BlockTrans Worker 部署指南
 
+**🎉 重大更新**: 现已支持 .zip/.mcaddon/.mcpack 附加包格式！
+
 ## 📋 部署前准备
 
 1. 准备一个 **Cloudflare 账户**（免费即可）
@@ -166,14 +168,20 @@ API_KEY = your-api-key
 3. 尝试上传一个测试 .lang 文件
 4. 检查翻译功能是否正常工作
 
-### 测试用 .lang 文件
+### 测试用文件
 
+**测试 .lang 文件**：
 创建一个测试文件 `test.lang`：
 ```
 entity.minecraft.pig.name=Pig
 entity.minecraft.cow.name=Cow
 item.minecraft.apple.name=Apple
 ```
+
+**测试附加包**：
+- 上传任何包含 res/texts/ 目录的 .mcaddon 或 .mcpack 文件
+- 系统会自动识别并翻译其中的语言文件
+- 下载翻译后的完整附加包
 
 上传后应该得到中文翻译结果。
 

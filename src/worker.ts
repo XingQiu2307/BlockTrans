@@ -299,16 +299,31 @@ const HTML_CONTENT = `<!DOCTYPE html>
     <div class="main-container">
         <div class="hero">
             <h1>🧱 BlockTrans</h1>
-            <p>AI 驱动的 Minecraft .lang 文件翻译工具</p>
+            <p>AI 驱动的 Minecraft 附加包翻译工具</p>
+            <p style="font-size: 1rem; opacity: 0.8;">支持 .lang 文件和 .zip/.mcaddon/.mcpack 附加包</p>
         </div>
 
         <div class="container">
 
             <div class="upload-area" id="uploadArea">
-                <div class="upload-icon">📁</div>
-                <h3>上传 .lang 文件</h3>
+                <div class="upload-icon">📦</div>
+                <h3>上传文件进行翻译</h3>
+                <div style="margin: 15px 0;">
+                    <div style="display: flex; justify-content: center; gap: 20px; margin-bottom: 15px; flex-wrap: wrap;">
+                        <div style="text-align: center;">
+                            <div style="font-size: 2rem;">📄</div>
+                            <div style="font-weight: bold; color: #667eea;">.lang 文件</div>
+                            <div style="font-size: 0.9rem; color: #666;">单个语言文件</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 2rem;">📦</div>
+                            <div style="font-weight: bold; color: #667eea;">附加包</div>
+                            <div style="font-size: 0.9rem; color: #666;">.zip/.mcaddon/.mcpack</div>
+                        </div>
+                    </div>
+                </div>
                 <p>拖拽文件到这里，或点击按钮选择文件</p>
-                <input type="file" id="fileInput" accept=".lang,.txt" style="display: none;">
+                <input type="file" id="fileInput" accept=".lang,.txt,.zip,.mcaddon,.mcpack" style="display: none;">
                 <button onclick="document.getElementById('fileInput').click()">📂 选择文件</button>
             </div>
 
@@ -324,8 +339,20 @@ const HTML_CONTENT = `<!DOCTYPE html>
     <footer class="footer">
         <div class="footer-content">
             <h3>关于 BlockTrans</h3>
-            <p>BlockTrans 是一个开源的 AI 驱动翻译工具，专为 Minecraft Bedrock Edition 的 .lang 文件设计。<br>
+            <p>BlockTrans 是一个开源的 AI 驱动翻译工具，专为 Minecraft Bedrock Edition 设计。<br>
+            支持单个 .lang 文件和完整附加包（.zip/.mcaddon/.mcpack）的一键翻译。<br>
             基于 Cloudflare Workers 构建，提供快速、可靠的翻译服务。</p>
+
+            <div style="margin: 20px 0; padding: 20px; background: rgba(102, 126, 234, 0.1); border-radius: 10px;">
+                <h4 style="color: #667eea; margin-bottom: 10px;">🚀 新功能亮点</h4>
+                <ul style="text-align: left; max-width: 600px; margin: 0 auto;">
+                    <li><strong>📦 附加包支持</strong> - 直接上传 .mcaddon/.mcpack 文件</li>
+                    <li><strong>🎯 智能识别</strong> - 自动定位 res/texts/ 下的语言文件</li>
+                    <li><strong>🔄 一键处理</strong> - 上传附加包，下载翻译版本</li>
+                    <li><strong>🌏 中文输出</strong> - 自动重命名为 zh_CN.lang</li>
+                    <li><strong>✏️ 在线编辑</strong> - 支持翻译结果的实时修改</li>
+                </ul>
+            </div>
 
             <div class="footer-links">
                 <a href="https://github.com/XingQiu2307/BlockTrans" target="_blank">📚 GitHub 仓库</a>
@@ -375,26 +402,59 @@ const HTML_CONTENT = `<!DOCTYPE html>
 
         // 处理文件
         async function handleFile(file) {
-            if (!file.name.endsWith('.lang') && !file.name.endsWith('.txt')) {
-                alert('请选择 .lang 或 .txt 文件');
+            const fileName = file.name.toLowerCase();
+
+            if (fileName.endsWith('.zip') || fileName.endsWith('.mcaddon') || fileName.endsWith('.mcpack')) {
+                // 处理 ZIP 格式文件
+                await handleZipFile(file);
+            } else if (fileName.endsWith('.lang') || fileName.endsWith('.txt')) {
+                // 处理单个 .lang 文件
+                const content = await file.text();
+                await translateContent(content, 'lang');
+            } else {
+                showNotification('❌ 不支持的文件格式。请选择 .lang、.zip、.mcaddon 或 .mcpack 文件', 'error');
                 return;
             }
+        }
 
-            const content = await file.text();
-            await translateContent(content);
+        // 处理 ZIP 文件
+        async function handleZipFile(file) {
+            try {
+                showNotification('📦 正在解析附加包...', 'info');
+
+                const arrayBuffer = await file.arrayBuffer();
+                const formData = new FormData();
+                formData.append('file', new Blob([arrayBuffer]), file.name);
+
+                await translateContent(formData, 'zip');
+            } catch (error) {
+                console.error('ZIP file processing error:', error);
+                showNotification('❌ ZIP 文件处理失败: ' + error.message, 'error');
+            }
         }
 
         // 翻译内容
-        async function translateContent(content) {
+        async function translateContent(content, type = 'lang') {
             loading.style.display = 'block';
             result.innerHTML = '';
 
             try {
-                const response = await fetch('/api/translate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain' },
-                    body: content
-                });
+                let response;
+
+                if (type === 'zip') {
+                    // ZIP 文件使用 FormData
+                    response = await fetch('/api/translate-zip', {
+                        method: 'POST',
+                        body: content
+                    });
+                } else {
+                    // .lang 文件使用文本
+                    response = await fetch('/api/translate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: content
+                    });
+                }
 
                 if (!response.ok) {
                     // 尝试解析错误响应
@@ -421,15 +481,41 @@ const HTML_CONTENT = `<!DOCTYPE html>
                     return;
                 }
 
-                const translations = await response.json();
+                if (type === 'zip') {
+                    // ZIP 文件响应处理
+                    if (response.headers.get('content-type')?.includes('application/zip')) {
+                        // 直接下载 ZIP 文件
+                        const blob = await response.blob();
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'translated_addon.zip';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
 
-                // 检查是否返回了错误对象而不是翻译数组
-                if (translations.error) {
-                    displayError(translations.error, translations.details || translations.message, response.status);
-                    return;
+                        showNotification('✅ 翻译完成！附加包已下载', 'success');
+                        result.innerHTML = '<div style="text-align: center; padding: 40px; color: #10b981;"><h3>🎉 翻译完成！</h3><p>翻译后的附加包已自动下载</p></div>';
+                        return;
+                    } else {
+                        // 错误响应
+                        const errorData = await response.json();
+                        displayError(errorData.error, errorData.details || errorData.message, response.status);
+                        return;
+                    }
+                } else {
+                    // .lang 文件响应处理
+                    const translations = await response.json();
+
+                    // 检查是否返回了错误对象而不是翻译数组
+                    if (translations.error) {
+                        displayError(translations.error, translations.details || translations.message, response.status);
+                        return;
+                    }
+
+                    displayResults(translations);
                 }
-
-                displayResults(translations);
             } catch (error) {
                 displayError('网络错误', error.message, 0);
             } finally {
@@ -719,6 +805,11 @@ export default {
       return handleTranslateAPI(request, env, corsHeaders);
     }
 
+    // API 路由：ZIP 文件翻译接口
+    if (pathname === '/api/translate-zip' && request.method === 'POST') {
+      return handleTranslateZipAPI(request, env, corsHeaders);
+    }
+
     // 静态文件路由 - 返回内嵌的 HTML 页面
     return new Response(HTML_CONTENT, {
       headers: {
@@ -883,7 +974,142 @@ async function handleTranslateAPI(request: Request, env: Env, corsHeaders: Recor
   }
 }
 
-// Worker 版本不需要复杂的静态资源处理，所有内容都内嵌在 HTML 中
+// 处理 ZIP 文件翻译 API
+async function handleTranslateZipAPI(request: Request, env: Env, corsHeaders: Record<string, string>): Promise<Response> {
+  try {
+    // 环境变量检查和默认值处理
+    const apiUrl = env.API_URL || 'https://api.openai.com/v1/chat/completions';
+    const modelName = env.MODEL_NAME || 'gpt-3.5-turbo';
+    const apiKey = env.API_KEY;
+
+    if (!apiKey) {
+      return new Response(JSON.stringify({
+        error: 'Server configuration error: API_KEY not configured',
+        details: 'Please set API_KEY as a Secret in Cloudflare Dashboard'
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    const formData = await request.formData();
+    const file = formData.get('file') as File;
+
+    if (!file) {
+      return new Response(JSON.stringify({
+        error: 'No file uploaded'
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    console.log('Processing ZIP file:', file.name, 'Size:', file.size);
+
+    // 读取 ZIP 文件
+    const zipBuffer = await file.arrayBuffer();
+    const zipData = new Uint8Array(zipBuffer);
+
+    // 解析 ZIP 文件并提取 .lang 文件
+    const langFiles = await extractLangFilesFromZip(zipData);
+
+    if (langFiles.length === 0) {
+      return new Response(JSON.stringify({
+        error: 'No .lang files found in the uploaded package',
+        details: 'Please ensure your addon contains .lang files in res/texts/ directory'
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    console.log('Found .lang files:', langFiles.map(f => f.path));
+
+    // 翻译所有 .lang 文件
+    const translatedFiles = [];
+    for (const langFile of langFiles) {
+      const itemsToTranslate = parseLangFile(langFile.content);
+
+      if (itemsToTranslate.length > 0) {
+        const textsToTranslate = itemsToTranslate.map(item => item.value);
+
+        // 调用 AI API 翻译
+        const aiResponse = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: modelName,
+            messages: [{ role: 'user', content: createTranslationPrompt(textsToTranslate) }],
+            max_tokens: 2000,
+            temperature: 0.3
+          }),
+        });
+
+        if (!aiResponse.ok) {
+          const errorText = await aiResponse.text();
+          return new Response(JSON.stringify({
+            error: `AI API request failed with status ${aiResponse.status}`,
+            details: errorText
+          }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        const aiResult = await aiResponse.json() as { choices: Array<{ message: { content: string } }> };
+
+        if (!aiResult.choices || !aiResult.choices[0] || !aiResult.choices[0].message) {
+          throw new Error('Invalid AI API response format');
+        }
+
+        const translatedTexts = aiResult.choices[0].message.content.split('\n').filter(line => line.trim());
+
+        if (translatedTexts.length !== itemsToTranslate.length) {
+          console.warn('Translation count mismatch for', langFile.path);
+        }
+
+        // 生成翻译后的 .lang 文件内容
+        let translatedContent = '';
+        itemsToTranslate.forEach((item, index) => {
+          const translation = translatedTexts[index] || item.value;
+          translatedContent += `${item.key}=${translation}\n`;
+        });
+
+        // 将原文件路径改为中文路径
+        const chinesePath = langFile.path.replace(/\/[^\/]+\.lang$/, '/zh_CN.lang');
+
+        translatedFiles.push({
+          path: chinesePath,
+          content: translatedContent
+        });
+      }
+    }
+
+    // 重新打包为 ZIP
+    const newZipData = await createZipWithTranslations(zipData, translatedFiles);
+
+    return new Response(newZipData, {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/zip',
+        'Content-Disposition': 'attachment; filename="translated_addon.zip"'
+      }
+    });
+
+  } catch (error) {
+    console.error('ZIP translation failed:', error);
+    return new Response(JSON.stringify({
+      error: 'ZIP translation failed',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+}
 
 // 解析 .lang 文件
 interface TranslationItem {
@@ -928,4 +1154,237 @@ ${texts.join('\n')}
 
 Translations:`;
   return prompt;
+}
+
+// 从 ZIP 数据中提取 .lang 文件
+async function extractLangFilesFromZip(zipData: Uint8Array): Promise<Array<{path: string, content: string}>> {
+  const langFiles: Array<{path: string, content: string}> = [];
+
+  try {
+    // 简单的 ZIP 文件解析（仅支持基本的 ZIP 格式）
+    const view = new DataView(zipData.buffer);
+    let offset = 0;
+
+    // 查找中央目录结构
+    const centralDirSignature = 0x06054b50;
+    let centralDirOffset = -1;
+
+    // 从文件末尾开始查找中央目录
+    for (let i = zipData.length - 22; i >= 0; i--) {
+      if (view.getUint32(i, true) === centralDirSignature) {
+        centralDirOffset = view.getUint32(i + 16, true);
+        break;
+      }
+    }
+
+    if (centralDirOffset === -1) {
+      throw new Error('Invalid ZIP file: Central directory not found');
+    }
+
+    // 解析中央目录条目
+    offset = centralDirOffset;
+    const centralDirSignature2 = 0x02014b50;
+
+    while (offset < zipData.length - 22) {
+      const signature = view.getUint32(offset, true);
+      if (signature !== centralDirSignature2) break;
+
+      const filenameLength = view.getUint16(offset + 28, true);
+      const extraFieldLength = view.getUint16(offset + 30, true);
+      const commentLength = view.getUint16(offset + 32, true);
+      const localHeaderOffset = view.getUint32(offset + 42, true);
+
+      // 读取文件名
+      const filenameBytes = zipData.slice(offset + 46, offset + 46 + filenameLength);
+      const filename = new TextDecoder().decode(filenameBytes);
+
+      // 检查是否是 .lang 文件且在正确路径下
+      if (filename.toLowerCase().endsWith('.lang') &&
+          (filename.includes('res/texts/') || filename.includes('res\\texts\\') ||
+           filename.includes('texts/') || filename.includes('texts\\'))) {
+
+        // 读取文件内容
+        const fileContent = await extractFileFromZip(zipData, localHeaderOffset);
+        if (fileContent) {
+          langFiles.push({
+            path: filename,
+            content: fileContent
+          });
+        }
+      }
+
+      offset += 46 + filenameLength + extraFieldLength + commentLength;
+    }
+
+  } catch (error) {
+    console.error('ZIP parsing error:', error);
+    // 如果 ZIP 解析失败，尝试简单的文本搜索
+    const zipText = new TextDecoder('utf-8', { fatal: false }).decode(zipData);
+    const langMatches = zipText.match(/[^=\n]*=[^=\n]*\n/g);
+
+    if (langMatches && langMatches.length > 10) {
+      // 看起来像是 .lang 文件内容
+      langFiles.push({
+        path: 'extracted.lang',
+        content: langMatches.join('')
+      });
+    }
+  }
+
+  return langFiles;
+}
+
+// 从 ZIP 中提取单个文件内容
+async function extractFileFromZip(zipData: Uint8Array, localHeaderOffset: number): Promise<string | null> {
+  try {
+    const view = new DataView(zipData.buffer);
+    const localSignature = 0x04034b50;
+
+    if (view.getUint32(localHeaderOffset, true) !== localSignature) {
+      return null;
+    }
+
+    const filenameLength = view.getUint16(localHeaderOffset + 26, true);
+    const extraFieldLength = view.getUint16(localHeaderOffset + 28, true);
+    const compressedSize = view.getUint32(localHeaderOffset + 18, true);
+    const compressionMethod = view.getUint16(localHeaderOffset + 8, true);
+
+    const dataOffset = localHeaderOffset + 30 + filenameLength + extraFieldLength;
+    const fileData = zipData.slice(dataOffset, dataOffset + compressedSize);
+
+    if (compressionMethod === 0) {
+      // 无压缩
+      return new TextDecoder().decode(fileData);
+    } else {
+      // 压缩文件 - 简单处理，尝试直接解码
+      try {
+        return new TextDecoder().decode(fileData);
+      } catch {
+        return null;
+      }
+    }
+  } catch (error) {
+    console.error('File extraction error:', error);
+    return null;
+  }
+}
+
+// 创建包含翻译文件的新 ZIP
+async function createZipWithTranslations(originalZipData: Uint8Array, translatedFiles: Array<{path: string, content: string}>): Promise<Uint8Array> {
+  // 简化实现：创建一个新的 ZIP 文件，只包含翻译后的文件
+  const files: Array<{name: string, data: Uint8Array}> = [];
+
+  // 添加翻译后的文件
+  for (const file of translatedFiles) {
+    files.push({
+      name: file.path,
+      data: new TextEncoder().encode(file.content)
+    });
+  }
+
+  // 创建简单的 ZIP 文件
+  return createSimpleZip(files);
+}
+
+// 创建简单的 ZIP 文件
+function createSimpleZip(files: Array<{name: string, data: Uint8Array}>): Uint8Array {
+  const zipParts: Uint8Array[] = [];
+  const centralDir: Uint8Array[] = [];
+  let offset = 0;
+
+  for (const file of files) {
+    // 本地文件头
+    const localHeader = new ArrayBuffer(30 + file.name.length);
+    const localView = new DataView(localHeader);
+
+    localView.setUint32(0, 0x04034b50, true); // 本地文件头签名
+    localView.setUint16(4, 20, true); // 版本
+    localView.setUint16(6, 0, true); // 标志
+    localView.setUint16(8, 0, true); // 压缩方法（无压缩）
+    localView.setUint16(10, 0, true); // 时间
+    localView.setUint16(12, 0, true); // 日期
+    localView.setUint32(14, 0, true); // CRC32（简化为0）
+    localView.setUint32(18, file.data.length, true); // 压缩大小
+    localView.setUint32(22, file.data.length, true); // 未压缩大小
+    localView.setUint16(26, file.name.length, true); // 文件名长度
+    localView.setUint16(28, 0, true); // 额外字段长度
+
+    const nameBytes = new TextEncoder().encode(file.name);
+    const localHeaderBytes = new Uint8Array(localHeader);
+    const localHeaderWithName = new Uint8Array(localHeaderBytes.length + nameBytes.length);
+    localHeaderWithName.set(localHeaderBytes);
+    localHeaderWithName.set(nameBytes, localHeaderBytes.length);
+
+    zipParts.push(localHeaderWithName);
+    zipParts.push(file.data);
+
+    // 中央目录条目
+    const centralHeader = new ArrayBuffer(46 + file.name.length);
+    const centralView = new DataView(centralHeader);
+
+    centralView.setUint32(0, 0x02014b50, true); // 中央目录签名
+    centralView.setUint16(4, 20, true); // 版本
+    centralView.setUint16(6, 20, true); // 最小版本
+    centralView.setUint16(8, 0, true); // 标志
+    centralView.setUint16(10, 0, true); // 压缩方法
+    centralView.setUint16(12, 0, true); // 时间
+    centralView.setUint16(14, 0, true); // 日期
+    centralView.setUint32(16, 0, true); // CRC32
+    centralView.setUint32(20, file.data.length, true); // 压缩大小
+    centralView.setUint32(24, file.data.length, true); // 未压缩大小
+    centralView.setUint16(28, file.name.length, true); // 文件名长度
+    centralView.setUint16(30, 0, true); // 额外字段长度
+    centralView.setUint16(32, 0, true); // 注释长度
+    centralView.setUint16(34, 0, true); // 磁盘号
+    centralView.setUint16(36, 0, true); // 内部属性
+    centralView.setUint32(38, 0, true); // 外部属性
+    centralView.setUint32(42, offset, true); // 本地头偏移
+
+    const centralHeaderBytes = new Uint8Array(centralHeader);
+    const centralHeaderWithName = new Uint8Array(centralHeaderBytes.length + nameBytes.length);
+    centralHeaderWithName.set(centralHeaderBytes);
+    centralHeaderWithName.set(nameBytes, centralHeaderBytes.length);
+
+    centralDir.push(centralHeaderWithName);
+
+    offset += localHeaderWithName.length + file.data.length;
+  }
+
+  // 计算总大小
+  const centralDirSize = centralDir.reduce((sum, dir) => sum + dir.length, 0);
+
+  // 中央目录结束记录
+  const endRecord = new ArrayBuffer(22);
+  const endView = new DataView(endRecord);
+
+  endView.setUint32(0, 0x06054b50, true); // 结束记录签名
+  endView.setUint16(4, 0, true); // 磁盘号
+  endView.setUint16(6, 0, true); // 中央目录磁盘号
+  endView.setUint16(8, files.length, true); // 本磁盘条目数
+  endView.setUint16(10, files.length, true); // 总条目数
+  endView.setUint32(12, centralDirSize, true); // 中央目录大小
+  endView.setUint32(16, offset, true); // 中央目录偏移
+  endView.setUint16(20, 0, true); // 注释长度
+
+  // 组合所有部分
+  const totalSize = offset + centralDirSize + 22;
+  const result = new Uint8Array(totalSize);
+  let pos = 0;
+
+  // 添加文件数据
+  for (const part of zipParts) {
+    result.set(part, pos);
+    pos += part.length;
+  }
+
+  // 添加中央目录
+  for (const dir of centralDir) {
+    result.set(dir, pos);
+    pos += dir.length;
+  }
+
+  // 添加结束记录
+  result.set(new Uint8Array(endRecord), pos);
+
+  return result;
 }

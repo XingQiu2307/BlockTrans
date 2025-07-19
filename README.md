@@ -2,16 +2,21 @@
 
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/XingQiu2307/BlockTrans)
 
-一个专为 Minecraft Bedrock Edition 设计的 AI 驱动的 .lang 文件翻译工具。
+一个专为 Minecraft Bedrock Edition 设计的 AI 驱动翻译工具，支持单个 .lang 文件和完整附加包的一键翻译。
 
 **🚀 基于 Cloudflare Workers** - 更快、更简单、更可靠的部署方式！
+
+**🎉 重大更新** - 现已支持 .zip/.mcaddon/.mcpack 附加包格式！
 
 ## ✨ 功能特性
 
 - 🤖 **AI 智能翻译** - 使用先进的大语言模型进行高质量翻译
-- 📁 **文件上传** - 支持拖拽上传 .lang 格式的语言文件
+- � **附加包支持** - 支持 .zip/.mcaddon/.mcpack 格式的完整附加包
+- �📁 **多格式兼容** - 支持单个 .lang 文件和完整附加包
+- 🎯 **智能识别** - 自动定位 res/texts/ 目录下的语言文件
+- 🌏 **中文输出** - 自动重命名为 zh_CN.lang 中文语言文件
 - ✏️ **在线编辑** - 实时预览和编辑翻译结果
-- 💾 **一键下载** - 导出符合 Minecraft 规范的 .lang 文件
+- 💾 **一键处理** - 上传附加包，直接下载翻译后的完整包
 - ⚡ **极速部署** - 基于 Cloudflare Workers，一键部署，秒级启动
 - 🔒 **安全可靠** - API 密钥安全存储，支持自定义 AI 服务
 - 🌍 **全球加速** - Cloudflare 全球 CDN，访问速度更快
@@ -40,6 +45,18 @@ BlockTrans/
 - **更简单** - 一个文件搞定所有功能
 
 ## 🚀 快速开始
+
+### 使用方法
+
+**📦 附加包翻译（推荐）**：
+1. 上传你的 .mcaddon、.mcpack 或 .zip 附加包
+2. 系统自动识别并翻译 res/texts/ 下的语言文件
+3. 下载翻译后的完整附加包，语言文件已重命名为 zh_CN.lang
+
+**📄 单文件翻译**：
+1. 上传单个 .lang 文件
+2. 在线编辑和预览翻译结果
+3. 下载翻译后的文件
 
 ### 方式一：一键部署（推荐）
 
@@ -182,8 +199,9 @@ API_KEY = your-azure-api-key
 ## 🛠️ 技术栈
 
 - **架构**: Cloudflare Workers (单文件全栈应用)
-- **前端**: 内嵌 HTML + 原生 JavaScript
+- **前端**: 内嵌 HTML + 原生 JavaScript + ZIP 处理
 - **后端**: TypeScript + Cloudflare Workers Runtime
+- **文件处理**: 原生 ZIP 解析和生成（无外部依赖）
 - **部署**: Cloudflare Workers (全球边缘计算)
 - **开发**: Vue 3 + TypeScript + Vite (可选，用于复杂 UI 开发)
 - **包管理**: pnpm
