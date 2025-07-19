@@ -6,6 +6,20 @@ interface Env {
   API_KEY: string;
 }
 
+// DecompressionStream 类型定义（如果不存在）
+declare global {
+  interface DecompressionStream {
+    readonly readable: ReadableStream<Uint8Array>;
+    readonly writable: WritableStream<Uint8Array>;
+  }
+
+  interface DecompressionStreamConstructor {
+    new(format: string): DecompressionStream;
+  }
+
+  var DecompressionStream: DecompressionStreamConstructor | undefined;
+}
+
 // 简化版本：直接返回基本的 HTML 页面
 const HTML_CONTENT = `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -1489,9 +1503,46 @@ async function extractFileDataFromZip(zipData: Uint8Array, localHeaderOffset: nu
     if (compressionMethod === 0) {
       // 无压缩
       return fileData;
+    } else if (compressionMethod === 8) {
+      // Deflate 压缩
+      try {
+        if (typeof DecompressionStream !== 'undefined') {
+          const stream = new DecompressionStream('deflate');
+          const writer = stream.writable.getWriter();
+          const reader = stream.readable.getReader();
+
+          await writer.write(fileData);
+          await writer.close();
+
+          const chunks = [];
+          let done = false;
+          while (!done) {
+            const { value, done: readerDone } = await reader.read();
+            done = readerDone;
+            if (value) {
+              chunks.push(value);
+            }
+          }
+
+          const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+          const result = new Uint8Array(totalLength);
+          let offset = 0;
+          for (const chunk of chunks) {
+            result.set(chunk, offset);
+            offset += chunk.length;
+          }
+
+          return result;
+        } else {
+          console.warn('DecompressionStream not supported for binary data');
+          return fileData; // 回退到原始数据
+        }
+      } catch (error) {
+        console.error('Decompression failed:', error);
+        return fileData; // 回退到原始数据
+      }
     } else {
-      // 压缩文件 - 简单处理，返回原始数据
-      // 注意：这里应该实现解压缩，但为了简化，我们假设大多数文件是无压缩的
+      // 其他压缩方法，返回原始数据
       return fileData;
     }
   } catch (error) {
@@ -1530,15 +1581,73 @@ async function extractFileFromZip(zipData: Uint8Array, localHeaderOffset: number
       const content = new TextDecoder().decode(fileData);
       console.log('Extracted content preview:', content.substring(0, 100));
       return content;
+    } else if (compressionMethod === 8) {
+      // Deflate 压缩 - 最常见的 ZIP 压缩方法
+      console.log('File is compressed with Deflate method');
+      try {
+        // 检查是否支持 DecompressionStream
+        if (typeof DecompressionStream !== 'undefined') {
+          // 使用浏览器内置的 DecompressionStream API
+          const stream = new DecompressionStream('deflate');
+          const writer = stream.writable.getWriter();
+          const reader = stream.readable.getReader();
+
+          // 写入压缩数据
+          await writer.write(fileData);
+          await writer.close();
+
+          // 读取解压后的数据
+          const chunks = [];
+          let done = false;
+          while (!done) {
+            const { value, done: readerDone } = await reader.read();
+            done = readerDone;
+            if (value) {
+              chunks.push(value);
+            }
+          }
+
+          // 合并所有块
+          const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+          const result = new Uint8Array(totalLength);
+          let offset = 0;
+          for (const chunk of chunks) {
+            result.set(chunk, offset);
+            offset += chunk.length;
+          }
+
+          const content = new TextDecoder().decode(result);
+          console.log('Decompressed content preview:', content.substring(0, 100));
+          return content;
+        } else {
+          console.warn('DecompressionStream not supported, trying fallback');
+          throw new Error('DecompressionStream not supported');
+        }
+      } catch (decompressError) {
+        console.error('Failed to decompress file:', decompressError);
+        // 回退到直接解码（可能会是乱码，但至少不会崩溃）
+        try {
+          const content = new TextDecoder('utf-8', { fatal: false }).decode(fileData);
+          console.log('Fallback content preview:', content.substring(0, 100));
+          // 如果内容看起来像乱码，返回错误信息
+          if (content.includes('�') || content.length < 10) {
+            return `# 解压缩失败\n# 文件可能使用了不支持的压缩格式\n# 请尝试使用无压缩的 ZIP 文件\nentity.error.decompression=解压缩失败`;
+          }
+          return content;
+        } catch (decodeError) {
+          console.error('Failed to decode file:', decodeError);
+          return `# 文件解码失败\nentity.error.decode=文件解码失败`;
+        }
+      }
     } else {
-      // 压缩文件 - 简单处理，尝试直接解码
-      console.log('File is compressed, method:', compressionMethod);
+      // 其他压缩方法
+      console.log('Unsupported compression method:', compressionMethod);
       try {
         const content = new TextDecoder().decode(fileData);
-        console.log('Extracted compressed content preview:', content.substring(0, 100));
+        console.log('Raw content preview:', content.substring(0, 100));
         return content;
       } catch (decodeError) {
-        console.error('Failed to decode compressed file:', decodeError);
+        console.error('Failed to decode file:', decodeError);
         return null;
       }
     }
