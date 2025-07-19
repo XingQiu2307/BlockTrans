@@ -732,15 +732,18 @@ export default {
 // 处理翻译 API
 async function handleTranslateAPI(request: Request, env: Env, corsHeaders: Record<string, string>): Promise<Response> {
   try {
-    // 检查环境变量
-    if (!env.API_URL || !env.MODEL_NAME || !env.API_KEY) {
-      console.error('Missing environment variables:', {
-        API_URL: !!env.API_URL,
-        MODEL_NAME: !!env.MODEL_NAME,
-        API_KEY: !!env.API_KEY
-      });
+    // 环境变量检查和默认值处理
+    const apiUrl = env.API_URL || 'https://api.openai.com/v1/chat/completions';
+    const modelName = env.MODEL_NAME || 'gpt-3.5-turbo';
+    const apiKey = env.API_KEY;
+
+    // API_KEY 是必需的，没有默认值
+    if (!apiKey) {
+      console.error('Missing API_KEY environment variable');
       return new Response(JSON.stringify({
-        error: 'Server configuration error: Missing required environment variables'
+        error: 'Server configuration error: API_KEY not configured',
+        details: 'Please set API_KEY as a Secret in Cloudflare Dashboard',
+        instructions: 'Go to Workers & Pages → Your Worker → Settings → Variables → Add variable (Type: Secret)'
       }), {
         status: 500,
         headers: {
@@ -749,6 +752,12 @@ async function handleTranslateAPI(request: Request, env: Env, corsHeaders: Recor
         },
       });
     }
+
+    console.log('Using configuration:', {
+      API_URL: apiUrl,
+      MODEL_NAME: modelName,
+      API_KEY_SET: !!apiKey
+    });
 
     const langFileContent = await request.text();
     console.log('Received content length:', langFileContent.length);
@@ -767,17 +776,17 @@ async function handleTranslateAPI(request: Request, env: Env, corsHeaders: Recor
 
     const textsToTranslate = itemsToTranslate.map(item => item.value);
 
-    console.log('Calling AI API:', env.API_URL);
-    console.log('Using model:', env.MODEL_NAME);
+    console.log('Calling AI API:', apiUrl);
+    console.log('Using model:', modelName);
 
-    const aiResponse = await fetch(env.API_URL, {
+    const aiResponse = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${env.API_KEY}`,
+        'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: env.MODEL_NAME,
+        model: modelName,
         messages: [
           {
             role: 'user',
