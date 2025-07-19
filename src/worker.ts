@@ -915,20 +915,20 @@ const HTML_CONTENT = `<!DOCTYPE html>
         // 显示通知
         function showNotification(message, type = 'info') {
             const notification = document.createElement('div');
-            notification.style.cssText = \`
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: \${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
-                color: white;
-                padding: 15px 20px;
-                border-radius: 10px;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-                z-index: 1000;
-                font-weight: 500;
-                transform: translateX(100%);
-                transition: transform 0.3s ease;
-            \`;
+            const bgColor = type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6';
+            notification.style.cssText =
+                'position: fixed;' +
+                'top: 20px;' +
+                'right: 20px;' +
+                'background: ' + bgColor + ';' +
+                'color: white;' +
+                'padding: 15px 20px;' +
+                'border-radius: 10px;' +
+                'box-shadow: 0 4px 15px rgba(0,0,0,0.2);' +
+                'z-index: 1000;' +
+                'font-weight: 500;' +
+                'transform: translateX(100%);' +
+                'transition: transform 0.3s ease;';
             notification.textContent = message;
 
             document.body.appendChild(notification);
