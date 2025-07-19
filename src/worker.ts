@@ -331,6 +331,7 @@ const HTML_CONTENT = (function(): string {
                 <p>拖拽文件到这里，或点击按钮选择文件</p>
                 <input type="file" id="fileInput" accept=".lang,.txt,.zip,.mcaddon,.mcpack" style="display: none;">
                 <button id="selectFileBtn">📂 选择文件</button>
+                <button onclick="document.getElementById('fileInput').click()" style="margin-left: 10px; background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px;">🔧 测试选择</button>
             </div>
 
             <div class="loading" id="loading">
@@ -385,62 +386,92 @@ const HTML_CONTENT = (function(): string {
 
     <script>
         // @ts-nocheck
+        console.log('Script starting...');
+
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
         const loading = document.getElementById('loading');
         const result = document.getElementById('result');
 
+        console.log('Elements found:', {
+            uploadArea: !!uploadArea,
+            fileInput: !!fileInput,
+            loading: !!loading,
+            result: !!result
+        });
+
         // 拖拽上传
-        uploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadArea.classList.add('dragover');
-        });
+        if (uploadArea) {
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
 
-        uploadArea.addEventListener('dragleave', () => {
-            uploadArea.classList.remove('dragover');
-        });
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
 
-        uploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadArea.classList.remove('dragover');
-            console.log('File dropped');
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                console.log('Calling handleFile from drop event');
-                handleFile(files[0]);
-            }
-        });
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                console.log('File dropped');
+                const files = e.dataTransfer.files;
+                if (files && files.length > 0) {
+                    console.log('Calling handleFile from drop event');
+                    handleFile(files[0]);
+                }
+            });
+        } else {
+            console.error('uploadArea element not found for drag events');
+        }
 
         // 点击上传区域或选择文件按钮
         const selectFileBtn = document.getElementById('selectFileBtn');
 
         function triggerFileSelect() {
             console.log('Triggering file select');
-            fileInput.click();
+            if (fileInput) {
+                fileInput.click();
+            } else {
+                console.error('fileInput element not found');
+            }
         }
 
-        uploadArea.addEventListener('click', (e) => {
-            // 如果点击的是按钮，不要重复触发
-            if (e.target.id !== 'selectFileBtn') {
-                console.log('Upload area clicked');
+        // 简化事件处理 - 直接绑定到上传区域
+        if (uploadArea) {
+            uploadArea.addEventListener('click', (e) => {
+                console.log('Upload area clicked, target:', e.target.tagName, e.target.id);
                 triggerFileSelect();
-            }
-        });
+            });
+        } else {
+            console.error('uploadArea element not found');
+        }
 
-        selectFileBtn.addEventListener('click', (e) => {
-            e.stopPropagation(); // 防止冒泡到 uploadArea
-            console.log('Select file button clicked');
-            triggerFileSelect();
-        });
+        // 如果选择文件按钮存在，也绑定事件（作为备用）
+        if (selectFileBtn) {
+            selectFileBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                console.log('Select file button clicked');
+                triggerFileSelect();
+            });
+        } else {
+            console.error('selectFileBtn element not found');
+        }
 
         // 文件选择
-        fileInput.addEventListener('change', (e) => {
-            console.log('File input changed');
-            if (e.target.files.length > 0) {
-                console.log('Calling handleFile from file input');
-                handleFile(e.target.files[0]);
-            }
-        });
+        if (fileInput) {
+            fileInput.addEventListener('change', (e) => {
+                console.log('File input changed');
+                if (e.target.files && e.target.files.length > 0) {
+                    console.log('Calling handleFile from file input');
+                    handleFile(e.target.files[0]);
+                } else {
+                    console.log('No files selected');
+                }
+            });
+        } else {
+            console.error('fileInput element not found for change event');
+        }
 
         // 处理文件
         async function handleFile(file) {
