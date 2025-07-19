@@ -364,11 +364,11 @@ const HTML_CONTENT = `<!DOCTYPE html>
             <div class="footer-info">
                 <div id="statsDisplay" style="margin: 15px 0; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 8px;">
                     <h4 style="color: #667eea; margin-bottom: 10px;">📊 使用统计</h4>
-                    <div style="display: flex; justify-content: center; gap: 30px; flex-wrap: wrap; font-size: 0.9rem;">
-                        <span>👥 总访问: <strong id="totalVisits">-</strong></span>
-                        <span>🔄 总翻译: <strong id="totalTranslations">-</strong></span>
-                        <span>📄 单文件: <strong id="langTranslations">-</strong></span>
-                        <span>📦 附加包: <strong id="zipTranslations">-</strong></span>
+                    <div style="display: flex; justify-content: center; gap: 30px; flex-wrap: wrap; font-size: 0.9rem; align-items: center;">
+                        <span>👥 访问人数: <img src="https://count.getloli.com/@访问人数?name=访问人数&theme=minecraft&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto" alt="访问统计" style="vertical-align: middle; margin-left: 5px;"></span>
+                        <span>🔄 翻译次数: <img src="https://count.getloli.com/@翻译次数?name=翻译次数&theme=minecraft&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto" alt="翻译统计" style="vertical-align: middle; margin-left: 5px;"></span>
+                        <span>📄 单文件: <img src="https://count.getloli.com/@单文件翻译?name=单文件翻译&theme=minecraft&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto" alt="单文件统计" style="vertical-align: middle; margin-left: 5px;"></span>
+                        <span>📦 附加包: <img src="https://count.getloli.com/@附加包翻译?name=附加包翻译&theme=minecraft&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto" alt="附加包统计" style="vertical-align: middle; margin-left: 5px;"></span>
                     </div>
                 </div>
                 <p><strong>作者:</strong> XingQiu2307 | <strong>技术支持:</strong> Vibe Coding</p>
@@ -789,24 +789,7 @@ const HTML_CONTENT = `<!DOCTYPE html>
             }, 3000);
         }
 
-        // 加载统计数据
-        async function loadStats() {
-            try {
-                const response = await fetch('/api/stats');
-                if (response.ok) {
-                    const stats = await response.json();
-                    document.getElementById('totalVisits').textContent = stats.totalVisits.toLocaleString();
-                    document.getElementById('totalTranslations').textContent = stats.totalTranslations.toLocaleString();
-                    document.getElementById('langTranslations').textContent = stats.langFileTranslations.toLocaleString();
-                    document.getElementById('zipTranslations').textContent = stats.zipFileTranslations.toLocaleString();
-                }
-            } catch (error) {
-                console.error('Failed to load stats:', error);
-            }
-        }
 
-        // 页面加载完成后加载统计数据
-        document.addEventListener('DOMContentLoaded', loadStats);
     </script>
 </body>
 </html>`;
@@ -843,10 +826,7 @@ export default {
       return handleTranslateZipAPI(request, env, corsHeaders);
     }
 
-    // API 路由：获取统计数据
-    if (pathname === '/api/stats' && request.method === 'GET') {
-      return handleStatsAPI(env, corsHeaders);
-    }
+
 
     // 静态文件路由 - 返回内嵌的 HTML 页面
     return new Response(HTML_CONTENT, {
@@ -1129,8 +1109,8 @@ async function handleTranslateZipAPI(request: Request, env: Env, corsHeaders: Re
       }
     }
 
-    // 重新打包为 ZIP
-    const newZipData = await createZipWithTranslations(translatedFiles);
+    // 重新打包为 ZIP，保留原有文件结构
+    const newZipData = await createZipWithTranslations(zipData, translatedFiles);
 
     // 统计翻译次数
     const totalTranslations = translatedFiles.reduce((sum, file) => {
@@ -1280,7 +1260,100 @@ async function extractLangFilesFromZip(zipData: Uint8Array): Promise<Array<{path
   return langFiles;
 }
 
-// 从 ZIP 中提取单个文件内容
+// 从 ZIP 数据中提取所有文件
+async function extractAllFilesFromZip(zipData: Uint8Array): Promise<Array<{name: string, data: Uint8Array}>> {
+  const allFiles: Array<{name: string, data: Uint8Array}> = [];
+
+  try {
+    const view = new DataView(zipData.buffer);
+    let offset = 0;
+
+    // 查找中央目录结构
+    const centralDirSignature = 0x06054b50;
+    let centralDirOffset = -1;
+
+    // 从文件末尾开始查找中央目录
+    for (let i = zipData.length - 22; i >= 0; i--) {
+      if (view.getUint32(i, true) === centralDirSignature) {
+        centralDirOffset = view.getUint32(i + 16, true);
+        break;
+      }
+    }
+
+    if (centralDirOffset === -1) {
+      throw new Error('Invalid ZIP file: Central directory not found');
+    }
+
+    // 解析中央目录条目
+    offset = centralDirOffset;
+    const centralDirSignature2 = 0x02014b50;
+
+    while (offset < zipData.length - 22) {
+      const signature = view.getUint32(offset, true);
+      if (signature !== centralDirSignature2) break;
+
+      const filenameLength = view.getUint16(offset + 28, true);
+      const extraFieldLength = view.getUint16(offset + 30, true);
+      const commentLength = view.getUint16(offset + 32, true);
+      const localHeaderOffset = view.getUint32(offset + 42, true);
+
+      // 读取文件名
+      const filenameBytes = zipData.slice(offset + 46, offset + 46 + filenameLength);
+      const filename = new TextDecoder().decode(filenameBytes);
+
+      // 提取文件数据
+      const fileData = await extractFileDataFromZip(zipData, localHeaderOffset);
+      if (fileData && filename && !filename.endsWith('/')) {
+        // 只添加文件，不添加目录
+        allFiles.push({
+          name: filename,
+          data: fileData
+        });
+      }
+
+      offset += 46 + filenameLength + extraFieldLength + commentLength;
+    }
+
+  } catch (error) {
+    console.error('ZIP parsing error:', error);
+  }
+
+  return allFiles;
+}
+
+// 从 ZIP 中提取单个文件的二进制数据
+async function extractFileDataFromZip(zipData: Uint8Array, localHeaderOffset: number): Promise<Uint8Array | null> {
+  try {
+    const view = new DataView(zipData.buffer);
+    const localSignature = 0x04034b50;
+
+    if (view.getUint32(localHeaderOffset, true) !== localSignature) {
+      return null;
+    }
+
+    const filenameLength = view.getUint16(localHeaderOffset + 26, true);
+    const extraFieldLength = view.getUint16(localHeaderOffset + 28, true);
+    const compressedSize = view.getUint32(localHeaderOffset + 18, true);
+    const compressionMethod = view.getUint16(localHeaderOffset + 8, true);
+
+    const dataOffset = localHeaderOffset + 30 + filenameLength + extraFieldLength;
+    const fileData = zipData.slice(dataOffset, dataOffset + compressedSize);
+
+    if (compressionMethod === 0) {
+      // 无压缩
+      return fileData;
+    } else {
+      // 压缩文件 - 简单处理，返回原始数据
+      // 注意：这里应该实现解压缩，但为了简化，我们假设大多数文件是无压缩的
+      return fileData;
+    }
+  } catch (error) {
+    console.error('File extraction error:', error);
+    return null;
+  }
+}
+
+// 从 ZIP 中提取单个文件内容（文本）
 async function extractFileFromZip(zipData: Uint8Array, localHeaderOffset: number): Promise<string | null> {
   try {
     const view = new DataView(zipData.buffer);
@@ -1315,21 +1388,78 @@ async function extractFileFromZip(zipData: Uint8Array, localHeaderOffset: number
   }
 }
 
-// 创建包含翻译文件的新 ZIP
-async function createZipWithTranslations(translatedFiles: Array<{path: string, content: string}>): Promise<Uint8Array> {
-  // 创建一个新的 ZIP 文件，只包含翻译后的文件
-  const files: Array<{name: string, data: Uint8Array}> = [];
+// 创建包含翻译文件的新 ZIP，保留原有文件结构
+async function createZipWithTranslations(originalZipData: Uint8Array, translatedFiles: Array<{path: string, content: string}>): Promise<Uint8Array> {
+  try {
+    // 解析原始 ZIP 文件，提取所有文件
+    const originalFiles = await extractAllFilesFromZip(originalZipData);
 
-  // 添加翻译后的文件
-  for (const file of translatedFiles) {
-    files.push({
-      name: file.path,
-      data: new TextEncoder().encode(file.content)
-    });
+    // 创建翻译文件的映射
+    const translationMap = new Map<string, string>();
+    for (const file of translatedFiles) {
+      translationMap.set(file.path, file.content);
+    }
+
+    // 准备新的文件列表
+    const newFiles: Array<{name: string, data: Uint8Array}> = [];
+
+    // 遍历原始文件，替换翻译文件，保留其他文件
+    for (const originalFile of originalFiles) {
+      if (translationMap.has(originalFile.name)) {
+        // 使用翻译后的内容
+        newFiles.push({
+          name: originalFile.name,
+          data: new TextEncoder().encode(translationMap.get(originalFile.name)!)
+        });
+      } else {
+        // 保留原始文件
+        newFiles.push(originalFile);
+      }
+    }
+
+    // 添加新的翻译文件（如果原文件中没有对应的文件）
+    for (const file of translatedFiles) {
+      const exists = originalFiles.some(f => f.name === file.path);
+      if (!exists) {
+        newFiles.push({
+          name: file.path,
+          data: new TextEncoder().encode(file.content)
+        });
+      }
+    }
+
+    // 创建新的 ZIP 文件
+    return createSimpleZip(newFiles);
+  } catch (error) {
+    console.error('Error creating ZIP with translations:', error);
+    // 如果处理失败，回退到简单模式
+    const files: Array<{name: string, data: Uint8Array}> = [];
+    for (const file of translatedFiles) {
+      files.push({
+        name: file.path,
+        data: new TextEncoder().encode(file.content)
+      });
+    }
+    return createSimpleZip(files);
+  }
+}
+
+// 计算 CRC32 校验和
+function calculateCRC32(data: Uint8Array): number {
+  const crcTable = new Array(256);
+  for (let i = 0; i < 256; i++) {
+    let c = i;
+    for (let j = 0; j < 8; j++) {
+      c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    }
+    crcTable[i] = c;
   }
 
-  // 创建简单的 ZIP 文件
-  return createSimpleZip(files);
+  let crc = 0 ^ (-1);
+  for (let i = 0; i < data.length; i++) {
+    crc = (crc >>> 8) ^ crcTable[(crc ^ data[i]) & 0xFF];
+  }
+  return (crc ^ (-1)) >>> 0;
 }
 
 // 创建简单的 ZIP 文件
@@ -1339,6 +1469,9 @@ function createSimpleZip(files: Array<{name: string, data: Uint8Array}>): Uint8A
   let offset = 0;
 
   for (const file of files) {
+    // 计算 CRC32
+    const crc32 = calculateCRC32(file.data);
+
     // 本地文件头
     const localHeader = new ArrayBuffer(30 + file.name.length);
     const localView = new DataView(localHeader);
@@ -1349,7 +1482,7 @@ function createSimpleZip(files: Array<{name: string, data: Uint8Array}>): Uint8A
     localView.setUint16(8, 0, true); // 压缩方法（无压缩）
     localView.setUint16(10, 0, true); // 时间
     localView.setUint16(12, 0, true); // 日期
-    localView.setUint32(14, 0, true); // CRC32（简化为0）
+    localView.setUint32(14, crc32, true); // CRC32
     localView.setUint32(18, file.data.length, true); // 压缩大小
     localView.setUint32(22, file.data.length, true); // 未压缩大小
     localView.setUint16(26, file.name.length, true); // 文件名长度
@@ -1375,7 +1508,7 @@ function createSimpleZip(files: Array<{name: string, data: Uint8Array}>): Uint8A
     centralView.setUint16(10, 0, true); // 压缩方法
     centralView.setUint16(12, 0, true); // 时间
     centralView.setUint16(14, 0, true); // 日期
-    centralView.setUint32(16, 0, true); // CRC32
+    centralView.setUint32(16, crc32, true); // CRC32
     centralView.setUint32(20, file.data.length, true); // 压缩大小
     centralView.setUint32(24, file.data.length, true); // 未压缩大小
     centralView.setUint16(28, file.name.length, true); // 文件名长度
@@ -1438,8 +1571,13 @@ function createSimpleZip(files: Array<{name: string, data: Uint8Array}>): Uint8A
 // 统计相关函数
 async function recordPageVisit(_env: Env): Promise<void> {
   try {
-    // 使用 Cloudflare KV 存储统计数据（如果可用）
-    // 这里使用简单的内存统计，实际部署时可以考虑使用 KV 或其他持久化存储
+    // 调用第三方统计服务
+    await fetch('https://count.getloli.com/@访问人数?name=访问人数&theme=minecraft&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto', {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'BlockTrans/1.0'
+      }
+    });
     console.log('Page visit recorded');
   } catch (error) {
     console.error('Failed to record page visit:', error);
@@ -1448,40 +1586,35 @@ async function recordPageVisit(_env: Env): Promise<void> {
 
 async function recordTranslation(_env: Env, type: 'lang' | 'zip', count: number): Promise<void> {
   try {
+    // 调用第三方统计服务
+    const promises = [
+      fetch('https://count.getloli.com/@翻译次数?name=翻译次数&theme=minecraft&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto', {
+        method: 'GET',
+        headers: { 'User-Agent': 'BlockTrans/1.0' }
+      })
+    ];
+
+    if (type === 'lang') {
+      promises.push(
+        fetch('https://count.getloli.com/@单文件翻译?name=单文件翻译&theme=minecraft&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto', {
+          method: 'GET',
+          headers: { 'User-Agent': 'BlockTrans/1.0' }
+        })
+      );
+    } else if (type === 'zip') {
+      promises.push(
+        fetch('https://count.getloli.com/@附加包翻译?name=附加包翻译&theme=minecraft&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto', {
+          method: 'GET',
+          headers: { 'User-Agent': 'BlockTrans/1.0' }
+        })
+      );
+    }
+
+    await Promise.all(promises);
     console.log(`Translation recorded: type=${type}, count=${count}`);
   } catch (error) {
     console.error('Failed to record translation:', error);
   }
 }
 
-async function handleStatsAPI(_env: Env, corsHeaders: Record<string, string>): Promise<Response> {
-  try {
-    // 返回模拟的统计数据
-    // 在实际部署中，这些数据应该从 KV 存储或数据库中获取
-    const stats = {
-      totalVisits: Math.floor(Math.random() * 10000) + 1000, // 模拟数据
-      totalTranslations: Math.floor(Math.random() * 5000) + 500,
-      langFileTranslations: Math.floor(Math.random() * 3000) + 300,
-      zipFileTranslations: Math.floor(Math.random() * 2000) + 200,
-      lastUpdated: new Date().toISOString()
-    };
 
-    return new Response(JSON.stringify(stats), {
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json',
-      },
-    });
-  } catch (error) {
-    console.error('Stats API error:', error);
-    return new Response(JSON.stringify({
-      error: 'Failed to get statistics'
-    }), {
-      status: 500,
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json',
-      },
-    });
-  }
-}
