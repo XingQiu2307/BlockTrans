@@ -179,8 +179,8 @@ item.minecraft.apple.name=Apple
 ```
 
 **测试附加包**：
-- 上传任何包含 res/texts/ 目录的 .mcaddon 或 .mcpack 文件
-- 系统会自动识别并翻译其中的语言文件
+- 上传任何包含 texts/ 目录的 .mcaddon 或 .mcpack 文件
+- 系统会智能识别并翻译其中的 .lang 语言文件（无需固定 res/ 路径）
 - 下载翻译后的完整附加包
 
 上传后应该得到中文翻译结果。
