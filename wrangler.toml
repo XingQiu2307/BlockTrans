@@ -1,13 +1,29 @@
 name = "blocktrans"
+main = "src/worker.ts"
 compatibility_date = "2024-01-01"
-pages_build_output_dir = "dist"
 
-# Environment variables for production
-# These should be set in Cloudflare Pages dashboard:
+# Environment variables configuration
+#
+# IMPORTANT: Do NOT put sensitive information like API_KEY here!
+# Use Cloudflare Dashboard or wrangler CLI to set secrets.
+#
+# Production variables should be set via:
+# 1. Cloudflare Dashboard: Workers & Pages → Your Worker → Settings → Variables
+# 2. wrangler CLI: wrangler secret put API_KEY
+
+[vars]
+# Example configuration (uncomment and modify as needed):
 # API_URL = "https://api.openai.com/v1/chat/completions"
 # MODEL_NAME = "gpt-3.5-turbo"
-# API_KEY = "your-api-key-here"
 
-# Note: For Cloudflare Pages, build configuration and environment variables
-# are managed through the Cloudflare Dashboard, not in this file.
-# This file is primarily used for wrangler CLI commands.
+# Secrets (set via Dashboard or CLI, NOT here):
+# API_KEY = "sk-..." # ❌ NEVER put this in wrangler.toml
+# Use: wrangler secret put API_KEY # ✅ Correct way
+
+# Development environment (for local testing)
+[env.development]
+vars = {
+  API_URL = "https://api.openai.com/v1/chat/completions",
+  MODEL_NAME = "gpt-3.5-turbo"
+}
+# Note: API_KEY should still be set as secret even in development

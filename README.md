@@ -1,50 +1,68 @@
 # 🧱 BlockTrans - 方块译者
 
-[![Deploy to Cloudflare Pages](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/XingQiu2307/BlockTrans)
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/XingQiu2307/BlockTrans)
 
 一个专为 Minecraft Bedrock Edition 设计的 AI 驱动的 .lang 文件翻译工具。
+
+**🚀 基于 Cloudflare Workers** - 更快、更简单、更可靠的部署方式！
 
 ## ✨ 功能特性
 
 - 🤖 **AI 智能翻译** - 使用先进的大语言模型进行高质量翻译
-- 📁 **文件上传** - 支持直接上传 .lang 格式的语言文件
+- 📁 **文件上传** - 支持拖拽上传 .lang 格式的语言文件
 - ✏️ **在线编辑** - 实时预览和编辑翻译结果
 - 💾 **一键下载** - 导出符合 Minecraft 规范的 .lang 文件
-- 🚀 **一键部署** - 基于 Cloudflare Pages，支持快速部署
+- ⚡ **极速部署** - 基于 Cloudflare Workers，一键部署，秒级启动
 - 🔒 **安全可靠** - API 密钥安全存储，支持自定义 AI 服务
+- 🌍 **全球加速** - Cloudflare 全球 CDN，访问速度更快
+- 💰 **成本更低** - Workers 免费额度更高，运行成本更低
 
 ## 🏗️ 项目架构
 
 ```
 BlockTrans/
-├── src/                    # Vue 3 前端源码
-│   ├── App.vue            # 主应用组件
+├── src/
+│   ├── worker.ts          # Cloudflare Worker 主文件（包含前端+后端）
+│   ├── App.vue            # Vue 3 前端源码（用于开发）
 │   ├── components/        # 可复用组件
 │   └── assets/           # 静态资源
-├── functions/             # Cloudflare Pages Functions
-│   └── api/
-│       └── translate.ts   # 翻译 API 端点
 ├── dist/                  # 构建输出目录
 ├── public/               # 公共静态文件
 ├── package.json          # 项目配置
-├── wrangler.toml         # Cloudflare 部署配置
+├── wrangler.toml         # Cloudflare Worker 配置
 └── README.md             # 项目文档
 ```
+
+**🔥 Worker 架构优势**：
+- **单文件部署** - 前端 HTML + 后端 API 都在一个 Worker 中
+- **零配置** - 无需复杂的构建设置和静态文件管理
+- **更快启动** - 冷启动时间更短，响应更快
+- **更简单** - 一个文件搞定所有功能
 
 ## 🚀 快速开始
 
 ### 方式一：一键部署（推荐）
 
-1. 点击上方的 "Deploy to Cloudflare Pages" 按钮
-2. 连接你的 GitHub 账户并 Fork 此仓库
-3. 在 Cloudflare Pages 中配置环境变量（见下方配置说明）
-4. 等待自动构建和部署完成
+� **超简单部署**：点击上方的 "Deploy to Cloudflare Workers" 按钮即可！
 
-### 方式二：手动部署
+**部署步骤**：
+1. **一键部署** → 点击上方的 Deploy 按钮
+2. **连接 GitHub** → 授权 Cloudflare 访问你的 GitHub 账户
+3. **自动部署** → Cloudflare 会自动 Fork 仓库并部署 Worker
+4. **设置环境变量** → 在 Worker 设置中配置 `API_URL`, `MODEL_NAME`, `API_KEY`
+5. **完成** → 立即可用，无需等待构建！
+
+**Worker 部署优势**：
+- ⚡ **秒级部署** - 无需构建过程，直接部署代码
+- 🔧 **零配置** - 无需设置构建命令和输出目录
+- 💰 **更便宜** - 免费额度：100,000 请求/天
+- 🌍 **全球分布** - 自动在全球 200+ 数据中心部署
+
+### 方式二：本地开发
 
 1. **克隆仓库**
    ```bash
-   git clone https://github.com/your-username/BlockTrans.git
+   git clone https://github.com/XingQiu2307/BlockTrans.git
    cd BlockTrans
    ```
 
@@ -65,32 +83,62 @@ BlockTrans/
    pnpm build
    ```
 
-5. **部署到 Cloudflare Pages**
-   ```bash
-   pnpm deploy
-   ```
-
 ## ⚙️ 环境变量配置
 
-**重要**：部署后必须在 Cloudflare Pages 项目设置中配置以下环境变量，否则翻译功能将无法正常工作。
+**重要**：部署后必须在 Cloudflare Workers 中配置以下环境变量，否则翻译功能将无法正常工作。
 
 ### 配置步骤
 
 1. 登录 [Cloudflare Dashboard](https://dash.cloudflare.com/)
-2. 进入 Pages 项目 → Settings → Environment variables
-3. 分别为 Production 和 Preview 环境添加以下变量
+2. 进入 Workers & Pages → 选择你的 Worker → Settings → Variables
+3. 添加以下环境变量
 
-### 生产环境 (Production)
+### 环境变量配置
 
-| 变量名 | 说明 | 示例值 |
-|--------|------|--------|
-| `API_URL` | AI API 端点地址 | `https://api.openai.com/v1/chat/completions` |
-| `MODEL_NAME` | 使用的模型名称 | `gpt-3.5-turbo` |
-| `API_KEY` | API 密钥（加密存储） | `sk-...` |
+| 变量名 | 类型 | 必需 | 说明 | 示例值 |
+|--------|------|------|------|--------|
+| `API_URL` | 环境变量 | ✅ | AI API 端点地址 | `https://api.openai.com/v1/chat/completions` |
+| `MODEL_NAME` | 环境变量 | ✅ | 使用的模型名称 | `gpt-3.5-turbo` |
+| `API_KEY` | **密钥** | ✅ | API 密钥（加密存储） | `sk-proj-...` |
 
-### 预览环境 (Preview)
+### 配置方式
 
-建议使用与生产环境相同的配置，或者使用测试用的 API 密钥。
+#### 方式一：Cloudflare Dashboard（推荐）
+1. 进入 Workers & Pages → 选择你的 Worker → Settings → Variables
+2. 在 **Environment Variables** 部分添加 `API_URL` 和 `MODEL_NAME`
+3. 在 **Secrets** 部分添加 `API_KEY`（加密存储）
+
+#### 方式二：wrangler CLI
+```bash
+# 设置环境变量
+wrangler secret put API_URL
+wrangler secret put MODEL_NAME
+wrangler secret put API_KEY
+
+# 或者使用 vars（不推荐用于敏感信息）
+wrangler secret put API_KEY  # 推荐：密钥方式
+```
+
+**⚠️ 重要提醒**：
+- `API_KEY` **必须**设置为 **Secret**（密钥），不能设置为普通环境变量
+- Secrets 是加密存储的，更安全
+- 普通环境变量在日志中可能被看到
+
+### 🚀 快速配置示例
+
+**OpenAI 配置**：
+```
+API_URL = https://api.openai.com/v1/chat/completions
+MODEL_NAME = gpt-3.5-turbo
+API_KEY = sk-proj-your-openai-key-here
+```
+
+**Azure OpenAI 配置**：
+```
+API_URL = https://your-resource.openai.azure.com/openai/deployments/gpt-35-turbo/chat/completions?api-version=2023-05-15
+MODEL_NAME = gpt-35-turbo
+API_KEY = your-azure-api-key
+```
 
 ### 支持的 AI 服务
 
@@ -100,10 +148,12 @@ BlockTrans/
 
 ## 🛠️ 技术栈
 
-- **前端**: Vue 3 + TypeScript + Vite
-- **部署**: Cloudflare Pages + Pages Functions
+- **架构**: Cloudflare Workers (单文件全栈应用)
+- **前端**: 内嵌 HTML + 原生 JavaScript
+- **后端**: TypeScript + Cloudflare Workers Runtime
+- **部署**: Cloudflare Workers (全球边缘计算)
+- **开发**: Vue 3 + TypeScript + Vite (可选，用于复杂 UI 开发)
 - **包管理**: pnpm
-- **构建工具**: Vite 7.0+
 - **类型检查**: TypeScript 5.8+
 
 ## 📋 系统要求
@@ -170,18 +220,20 @@ BlockTrans/
    - 检查依赖安装：`pnpm install`
 
 2. **部署失败**
-   - 确认 GitHub Secrets 已正确设置
-   - 检查 Cloudflare API Token 权限
+   - 确保使用 **Cloudflare Workers**（不是 Pages）
+   - 点击一键部署按钮，或使用 `wrangler deploy` 命令
+   - 无需设置构建命令，Worker 直接部署源代码
 
 3. **翻译功能不工作**
-   - 确认环境变量已在 Cloudflare Pages 中设置
-   - 检查 API 密钥是否有效
+   - 确认环境变量已在 Cloudflare Workers 中设置
+   - 检查 `API_KEY` 是否设置为 **Secret**（不是普通变量）
    - 验证 API_URL 格式是否正确
 
-4. **wrangler 部署错误**
-   - 确保项目名称在 Cloudflare 中唯一
-   - 检查 `wrangler.toml` 配置（已简化为 Pages 兼容格式）
-   - 如果遇到 "Configuration file for Pages projects does not support" 错误，说明配置文件格式正确
+4. **Worker 优势说明**
+   - ✅ **更简单** - 无需复杂的构建配置
+   - ✅ **更快** - 冷启动时间更短
+   - ✅ **更便宜** - 免费额度更高
+   - ✅ **更可靠** - 单文件部署，减少故障点
 
 ## �📞 支持
 

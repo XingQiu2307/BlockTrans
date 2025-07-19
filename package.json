@@ -16,12 +16,14 @@
     "lang"
   ],
   "author": "BlockTrans Contributors",
-  "license": "MIT",
+  "license": "GPL-3.0",
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
+    "build:worker": "echo 'Worker build complete - using embedded HTML'",
     "preview": "vite preview",
-    "deploy": "wrangler pages deploy dist --project-name=blocktrans",
+    "deploy": "wrangler deploy",
+    "dev:worker": "wrangler dev",
     "pages:dev": "wrangler pages dev dist"
   },
   "dependencies": {

@@ -1,4 +1,4 @@
-name: Deploy to Cloudflare Pages
+name: Build and Test
 
 on:
   push:
@@ -9,10 +9,10 @@ on:
       - main
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-    name: Deploy to Cloudflare Pages
-    
+    name: Build and Test
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -48,20 +48,13 @@ jobs:
       - name: Build project
         run: pnpm run build
 
-      - name: Deploy to Cloudflare Pages
-        uses: cloudflare/pages-action@v1
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: blocktrans
-          directory: dist
-          # Optional: git info
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Add deployment summary
+      - name: Add build summary
         run: |
-          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## ✅ Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "- **Project**: BlockTrans" >> $GITHUB_STEP_SUMMARY
-          echo "- **Environment**: ${{ github.ref == 'refs/heads/main' && 'Production' || 'Preview' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Node.js**: $(node --version)" >> $GITHUB_STEP_SUMMARY
+          echo "- **pnpm**: $(pnpm --version)" >> $GITHUB_STEP_SUMMARY
           echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Status**: ✅ Deployed successfully" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ✅ Build successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🚀 **Next Steps**: Deploy via Cloudflare Pages Git integration" >> $GITHUB_STEP_SUMMARY
