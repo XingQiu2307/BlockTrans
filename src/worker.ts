@@ -403,7 +403,7 @@ const HTML_CONTENT = (function(): string {
         uploadArea.addEventListener('drop', function(e) {
             e.preventDefault();
             uploadArea.classList.remove('dragover');
-            const files = e.dataTransfer.files;
+            var files = e.dataTransfer.files;
             if (files.length > 0) {
                 handleFile(files[0]);
             }
@@ -487,11 +487,11 @@ const HTML_CONTENT = (function(): string {
                     updateProgress(100, '处理失败', '服务器返回错误');
 
                     // 尝试解析错误响应
-                    let errorMessage = '翻译请求失败';
-                    let errorDetails = '';
+                    var errorMessage = '翻译请求失败';
+                    var errorDetails = '';
 
                     try {
-                        const errorData = await response.json();
+                        var errorData = await response.json();
                         if (errorData.error) {
                             errorMessage = errorData.error;
                         }
@@ -526,7 +526,7 @@ const HTML_CONTENT = (function(): string {
                     } else {
                         updateProgress(100, '处理失败', '响应格式错误');
                         // 错误响应
-                        const errorData = await response.json();
+                        var errorData = await response.json();
                         displayError(errorData.error, errorData.details || errorData.message, response.status);
                         return;
                     }
@@ -561,7 +561,7 @@ const HTML_CONTENT = (function(): string {
 
         // 显示错误信息
         function displayError(errorMessage, errorDetails, statusCode) {
-            let html = '<div style="background: #ffe6e6; border: 1px solid #ff9999; padding: 15px; border-radius: 5px; margin: 10px 0;">';
+            var html = '<div style="background: #ffe6e6; border: 1px solid #ff9999; padding: 15px; border-radius: 5px; margin: 10px 0;">';
             html += '<h3 style="color: #cc0000; margin-top: 0;">❌ 翻译失败</h3>';
             html += '<p><strong>错误信息:</strong> ' + errorMessage + '</p>';
 
@@ -621,7 +621,7 @@ const HTML_CONTENT = (function(): string {
                 return;
             }
 
-            let html = '<div style="margin-bottom: 20px;">';
+            var html = '<div style="margin-bottom: 20px;">';
             html += '<h3 style="color: #667eea; margin-bottom: 15px;">✅ 翻译完成 (' + translations.length + ' 条)</h3>';
             html += '<p style="color: #666; margin-bottom: 20px;">您可以直接编辑译文，然后下载修改后的文件</p>';
             html += '</div>';
@@ -690,12 +690,12 @@ const HTML_CONTENT = (function(): string {
         // 重置单个翻译
         function resetTranslation(index) {
             if (window.originalTranslations && window.currentTranslations) {
-                const original = window.originalTranslations[index];
-                const current = window.currentTranslations[index];
+                var original = window.originalTranslations[index];
+                var current = window.currentTranslations[index];
 
                 current.translation = original.translation;
 
-                const input = document.querySelector('tr[data-index="' + index + '"] .editable-input');
+                var input = document.querySelector('tr[data-index="' + index + '"] .editable-input');
                 if (input) {
                     input.value = original.translation;
                     input.style.borderColor = '#e5e7eb';
@@ -727,25 +727,32 @@ const HTML_CONTENT = (function(): string {
 
         // 复制到剪贴板
         function copyToClipboard() {
-            const content = generateLangContent();
-            navigator.clipboard.writeText(content).then(() => {
-                alert('✅ 内容已复制到剪贴板！');
-            }).catch(() => {
-                // 降级方案
-                const textarea = document.createElement('textarea');
-                textarea.value = content;
-                document.body.appendChild(textarea);
-                textarea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textarea);
-                alert('✅ 内容已复制到剪贴板！');
-            });
+            var content = generateLangContent();
+
+            // 使用传统的复制方法
+            var textarea = document.createElement('textarea');
+            textarea.value = content;
+            document.body.appendChild(textarea);
+            textarea.select();
+
+            try {
+                var successful = document.execCommand('copy');
+                if (successful) {
+                    alert('✅ 内容已复制到剪贴板！');
+                } else {
+                    alert('❌ 复制失败，请手动复制');
+                }
+            } catch (err) {
+                alert('❌ 复制失败，请手动复制');
+            }
+
+            document.body.removeChild(textarea);
         }
 
         // 生成 .lang 文件内容
         function generateLangContent() {
-            const translations = window.currentTranslations || [];
-            let content = '';
+            var translations = window.currentTranslations || [];
+            var content = '';
 
             for (var i = 0; i < translations.length; i++) {
                 var item = translations[i];
@@ -764,18 +771,25 @@ const HTML_CONTENT = (function(): string {
                 return;
             }
 
-            const blob = new Blob([content], { type: 'text/plain; charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
+            var blob = new Blob([content], { type: 'text/plain; charset=utf-8' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
             a.href = url;
 
             // 生成带时间戳的文件名
-            const now = new Date();
-            const timestamp = now.getFullYear() +
-                String(now.getMonth() + 1).padStart(2, '0') +
-                String(now.getDate()).padStart(2, '0') + '_' +
-                String(now.getHours()).padStart(2, '0') +
-                String(now.getMinutes()).padStart(2, '0');
+            var now = new Date();
+            var month = now.getMonth() + 1;
+            var date = now.getDate();
+            var hours = now.getHours();
+            var minutes = now.getMinutes();
+
+            // 手动补零
+            var monthStr = month < 10 ? '0' + month : String(month);
+            var dateStr = date < 10 ? '0' + date : String(date);
+            var hoursStr = hours < 10 ? '0' + hours : String(hours);
+            var minutesStr = minutes < 10 ? '0' + minutes : String(minutes);
+
+            var timestamp = now.getFullYear() + monthStr + dateStr + '_' + hoursStr + minutesStr;
 
             a.download = 'translated_' + timestamp + '.lang';
             document.body.appendChild(a);
@@ -789,7 +803,7 @@ const HTML_CONTENT = (function(): string {
 
         // 显示 ZIP 翻译结果
         function displayZipResults(zipResult) {
-            let html = '<div class="zip-results">';
+            var html = '<div class="zip-results">';
             html += '<h3>📦 附加包翻译结果</h3>';
             html += '<p style="color: #666; margin-bottom: 20px;">请检查并编辑翻译结果，确认后将重新打包为附加包</p>';
 
@@ -890,7 +904,7 @@ const HTML_CONTENT = (function(): string {
                     showNotification('✅ 翻译后的附加包已下载！', 'success');
                 } else {
                     updateProgress(100, '打包失败', '服务器返回错误');
-                    const errorData = await response.json();
+                    var errorData = await response.json();
                     showNotification('❌ 重新打包失败: ' + errorData.error, 'error');
                 }
             } catch (error) {
