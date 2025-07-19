@@ -2,6 +2,8 @@
 
 import { unzip, zip, strFromU8, strToU8 } from 'fflate';
 
+// TypeScript 类已移除，使用前端 JavaScript 实现
+
 interface Env {
   API_URL: string;
   MODEL_NAME: string;
@@ -389,16 +391,16 @@ const HTML_CONTENT = (function(): string {
         const result = document.getElementById('result');
 
         // 拖拽上传
-        uploadArea.addEventListener('dragover', (e) => {
+        uploadArea.addEventListener('dragover', function(e) {
             e.preventDefault();
             uploadArea.classList.add('dragover');
         });
 
-        uploadArea.addEventListener('dragleave', () => {
+        uploadArea.addEventListener('dragleave', function() {
             uploadArea.classList.remove('dragover');
         });
 
-        uploadArea.addEventListener('drop', (e) => {
+        uploadArea.addEventListener('drop', function(e) {
             e.preventDefault();
             uploadArea.classList.remove('dragover');
             const files = e.dataTransfer.files;
@@ -408,7 +410,7 @@ const HTML_CONTENT = (function(): string {
         });
 
         // 文件选择
-        fileInput.addEventListener('change', (e) => {
+        fileInput.addEventListener('change', function(e) {
             if (e.target.files.length > 0) {
                 handleFile(e.target.files[0]);
             }
@@ -551,7 +553,7 @@ const HTML_CONTENT = (function(): string {
                 displayError('网络错误', error.message, 0);
             } finally {
                 // 延迟隐藏 loading，让用户看到最终状态
-                setTimeout(() => {
+                setTimeout(function() {
                     loading.style.display = 'none';
                 }, 1000);
             }
@@ -628,14 +630,15 @@ const HTML_CONTENT = (function(): string {
             html += '<table>';
             html += '<tr><th style="width: 25%;">键名</th><th style="width: 35%;">原文</th><th style="width: 35%;">译文</th><th style="width: 5%;">操作</th></tr>';
 
-            translations.forEach((item, index) => {
-                html += '<tr data-index="' + index + '">' +
+            for (var i = 0; i < translations.length; i++) {
+                var item = translations[i];
+                html += '<tr data-index="' + i + '">' +
                     '<td><code style="background: #f1f5f9; padding: 4px 8px; border-radius: 4px; font-size: 12px;">' + escapeHtml(item.key) + '</code></td>' +
                     '<td style="color: #374151;">' + escapeHtml(item.source) + '</td>' +
                     '<td><input type="text" class="editable-input" value="' + escapeHtml(item.translation) + '" data-key="' + escapeHtml(item.key) + '" onchange="markAsModified(this)"></td>' +
-                    '<td><button onclick="resetTranslation(' + index + ')" style="background: #ef4444; padding: 4px 8px; font-size: 12px;" title="重置为原始翻译">🔄</button></td>' +
+                    '<td><button onclick="resetTranslation(' + i + ')" style="background: #ef4444; padding: 4px 8px; font-size: 12px;" title="重置为原始翻译">🔄</button></td>' +
                 '</tr>';
-            });
+            }
 
             html += '</table>';
             html += '</div>';
@@ -671,7 +674,13 @@ const HTML_CONTENT = (function(): string {
             const newValue = input.value;
 
             if (window.currentTranslations) {
-                const item = window.currentTranslations.find(t => t.key === key);
+                var item = null;
+                for (var i = 0; i < window.currentTranslations.length; i++) {
+                    if (window.currentTranslations[i].key === key) {
+                        item = window.currentTranslations[i];
+                        break;
+                    }
+                }
                 if (item) {
                     item.translation = newValue;
                 }
@@ -738,9 +747,10 @@ const HTML_CONTENT = (function(): string {
             const translations = window.currentTranslations || [];
             let content = '';
 
-            translations.forEach(item => {
+            for (var i = 0; i < translations.length; i++) {
+                var item = translations[i];
                 content += item.key + '=' + item.translation + '\n';
-            });
+            }
 
             return content;
         }
@@ -784,21 +794,23 @@ const HTML_CONTENT = (function(): string {
             html += '<p style="color: #666; margin-bottom: 20px;">请检查并编辑翻译结果，确认后将重新打包为附加包</p>';
 
             // 为每个翻译文件创建编辑区域
-            zipResult.translatedFiles.forEach((file, fileIndex) => {
+            for (var fileIndex = 0; fileIndex < zipResult.translatedFiles.length; fileIndex++) {
+                var file = zipResult.translatedFiles[fileIndex];
                 html += '<div class="file-section" style="margin-bottom: 30px; border: 1px solid #ddd; border-radius: 8px; padding: 20px;">';
                 html += '<h4 style="color: #667eea; margin-bottom: 15px;">📄 ' + file.path + '</h4>';
                 html += '<div class="translation-grid">';
 
-                file.translations.forEach((item, index) => {
+                for (var index = 0; index < file.translations.length; index++) {
+                    var item = file.translations[index];
                     html += '<div class="translation-item">';
                     html += '<div class="translation-key">' + escapeHtml(item.key) + '</div>';
                     html += '<div class="translation-source">' + escapeHtml(item.source) + '</div>';
                     html += '<input type="text" class="translation-input" data-file="' + fileIndex + '" data-index="' + index + '" value="' + escapeHtml(item.translation) + '">';
                     html += '</div>';
-                });
+                }
 
                 html += '</div></div>';
-            });
+            }
 
             html += '<div class="action-buttons">';
             html += '<button onclick="downloadZipResult()" class="download-btn">📦 下载翻译后的附加包</button>';
@@ -828,19 +840,22 @@ const HTML_CONTENT = (function(): string {
                 updateProgress(30, '收集内容', '正在收集用户编辑的翻译...');
 
                 // 收集用户编辑后的翻译内容
-                const updatedFiles = window.currentZipResult.translatedFiles.map((file, fileIndex) => {
-                    let updatedContent = '';
-                    file.translations.forEach((item, index) => {
-                        const input = document.querySelector('[data-file="' + fileIndex + '"][data-index="' + index + '"]');
-                        const translation = input ? input.value : item.translation;
+                var updatedFiles = [];
+                for (var fileIndex = 0; fileIndex < window.currentZipResult.translatedFiles.length; fileIndex++) {
+                    var file = window.currentZipResult.translatedFiles[fileIndex];
+                    var updatedContent = '';
+                    for (var index = 0; index < file.translations.length; index++) {
+                        var item = file.translations[index];
+                        var input = document.querySelector('[data-file="' + fileIndex + '"][data-index="' + index + '"]');
+                        var translation = input ? input.value : item.translation;
                         updatedContent += item.key + '=' + translation + '\n';
-                    });
+                    }
 
-                    return {
+                    updatedFiles.push({
                         path: file.path,
                         translatedContent: updatedContent
-                    };
-                });
+                    });
+                }
 
                 updateProgress(50, '重新打包', '正在重新打包附加包...');
 
@@ -884,7 +899,7 @@ const HTML_CONTENT = (function(): string {
                 showNotification('❌ 下载失败: ' + error.message, 'error');
             } finally {
                 // 延迟隐藏进度条
-                setTimeout(() => {
+                setTimeout(function() {
                     loading.style.display = 'none';
                 }, 2000);
             }
@@ -907,7 +922,7 @@ const HTML_CONTENT = (function(): string {
             if (progressText) progressText.textContent = text;
             if (progressDetails) progressDetails.textContent = details;
 
-            console.log(`Progress: ${percentage}% - ${text} - ${details}`);
+            console.log("Progress: " + percentage + "% - " + text + " - " + details);
         }
 
         // 重置进度条
@@ -916,7 +931,8 @@ const HTML_CONTENT = (function(): string {
         }
 
         // 显示通知
-        function showNotification(message, type = 'info') {
+        function showNotification(message, type) {
+            type = type || 'info';
             const notification = document.createElement('div');
             const bgColor = type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6';
             notification.style.cssText =
@@ -937,14 +953,14 @@ const HTML_CONTENT = (function(): string {
             document.body.appendChild(notification);
 
             // 动画显示
-            setTimeout(() => {
+            setTimeout(function() {
                 notification.style.transform = 'translateX(0)';
             }, 100);
 
             // 3秒后自动消失
-            setTimeout(() => {
+            setTimeout(function() {
                 notification.style.transform = 'translateX(100%)';
-                setTimeout(() => {
+                setTimeout(function() {
                     if (notification.parentNode) {
                         document.body.removeChild(notification);
                     }
@@ -958,6 +974,8 @@ const HTML_CONTENT = (function(): string {
 </html>`;
   return htmlContent;
 })();
+
+// 进度条和通知功能已移至前端 JavaScript
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -1287,10 +1305,11 @@ async function handleTranslateZipAPI(request: Request, env: Env, corsHeaders: Re
 
         // 生成翻译后的 .lang 文件内容
         let translatedContent = '';
-        itemsToTranslate.forEach((item, index) => {
+        for (let index = 0; index < itemsToTranslate.length; index++) {
+          const item = itemsToTranslate[index];
           const translation = translatedTexts[index] || item.value;
           translatedContent += `${item.key}=${translation}\n`;
-        });
+        }
 
         // 将原文件路径改为中文路径
         const chinesePath = langFile.path.replace(/\/[^\/]+\.lang$/, '/zh_CN.lang');
