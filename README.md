@@ -258,7 +258,9 @@ API_KEY = your-azure-api-key
 
    常见错误信息：
    - `Missing environment variables` → 环境变量未设置
-   - `AI API request failed` → API 密钥或 URL 错误
+   - `AI API request failed with status 401` → API 密钥错误
+   - `AI API request failed with status 429` → 请求频率限制或余额不足
+   - `AI API request failed with status 502` → AI 服务暂时不可用
    - `Invalid AI API response format` → API 响应格式问题
 
 5. **Worker 优势说明**
