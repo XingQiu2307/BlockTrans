@@ -96,27 +96,32 @@ BlockTrans/
 
 ### 环境变量配置
 
-| 变量名 | 类型 | 配置方式 | 说明 | 示例值 |
-|--------|------|----------|------|--------|
-| `API_URL` | **Text** | 🔧 可选覆盖 | AI API 端点地址（有默认值） | `https://api.openai.com/v1/chat/completions` |
-| `MODEL_NAME` | **Text** | 🔧 可选覆盖 | 使用的模型名称（有默认值） | `gpt-3.5-turbo` |
-| `API_KEY` | **Secret** | 🔐 必须设置 | API 密钥（加密存储） | `sk-proj-...` |
+| 变量名 | 类型 | 必需 | 说明 | 示例值 |
+|--------|------|------|------|--------|
+| `API_URL` | **Text** | ✅ | AI API 端点地址 | `https://api.openai.com/v1/chat/completions` |
+| `MODEL_NAME` | **Text** | ✅ | 使用的模型名称 | `gpt-3.5-turbo` |
+| `API_KEY` | **Secret** | ✅ | API 密钥（加密存储） | `sk-proj-...` |
 
 ### 配置方式
 
-#### 方式一：最简配置（推荐）
+#### 方式一：Cloudflare Dashboard（推荐）
 1. 进入 Workers & Pages → 选择你的 Worker → Settings → Variables
-2. **只需添加 API 密钥**：
-   - 点击 **"Add variable"**
-   - Name: `API_KEY`
-   - Type: **"Secret"**（加密存储）
-   - Value: 你的 OpenAI API 密钥
-3. **完成！** `API_URL` 和 `MODEL_NAME` 会使用内置默认值
+2. 点击 **"Add variable"** 按钮，分别添加以下三个变量：
 
-#### 方式二：自定义配置（可选）
-如果需要使用其他 AI 服务或模型，可以添加变量覆盖默认值：
-- 添加 `API_URL` (Text) - 覆盖默认的 OpenAI API 端点
-- 添加 `MODEL_NAME` (Text) - 覆盖默认的模型名称
+**API_URL**：
+- Name: `API_URL`
+- Type: **Text**
+- Value: `https://api.openai.com/v1/chat/completions`
+
+**MODEL_NAME**：
+- Name: `MODEL_NAME`
+- Type: **Text**
+- Value: `gpt-3.5-turbo`
+
+**API_KEY**：
+- Name: `API_KEY`
+- Type: **Secret**（加密存储）
+- Value: 你的 OpenAI API 密钥
 
 #### 方式二：wrangler CLI
 ```bash
@@ -140,21 +145,17 @@ Cloudflare Workers 支持三种变量类型：
 | **JSON** | JSON 格式数据 | 🔓 可见 | 复杂配置对象 |
 
 **⚠️ 重要提醒**：
-- `API_KEY` **必须**手动设置为 **Secret** 类型，不能设置为 Text
-- `API_URL` 和 `MODEL_NAME` 有内置默认值，可选择性覆盖
-- Dashboard 中设置的变量会覆盖默认值，且**不会在重新部署时丢失**
+- `API_URL` 和 `MODEL_NAME` 设置为 **Text** 类型
+- `API_KEY` **必须**设置为 **Secret** 类型，不能设置为 Text
 - Secret 类型是加密存储的，更安全
+- Text 类型的变量在日志中可能被看到，所以敏感信息要用 Secret
+- **Dashboard 中设置的变量不会在重新部署时丢失**
 
-**🔧 配置优先级**：
-1. **Cloudflare Dashboard 变量**（最高优先级）
-2. **wrangler.toml 默认值**（备用）
-3. **代码内置默认值**（最后备用）
-
-**🎯 设计优势**：
-- ✅ **开箱即用** - 无需配置即可使用 OpenAI
-- ✅ **灵活覆盖** - 可自定义任何 AI 服务
-- ✅ **配置持久** - Dashboard 设置不会因重新部署丢失
-- ✅ **开源友好** - 仓库不包含硬编码配置
+**🔧 为什么变量不会丢失**：
+- wrangler.toml 中的默认值只在变量**未设置**时生效
+- 一旦在 Dashboard 中设置了变量，就会覆盖默认值
+- 重新部署时，Dashboard 中的设置会保持不变
+- 这样既提供了开箱即用的体验，又保护了用户的自定义配置
 
 ### 🚀 快速配置示例
 

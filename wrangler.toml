@@ -2,18 +2,29 @@ name = "blocktrans"
 main = "src/worker.ts"
 compatibility_date = "2024-01-01"
 
-# Environment variables with default values
-# These can be overridden in Cloudflare Dashboard
+# Default environment variables for development and fallback
+# These provide working defaults but should be overridden in production
 [vars]
 API_URL = "https://api.openai.com/v1/chat/completions"
 MODEL_NAME = "gpt-3.5-turbo"
 
-# IMPORTANT:
-# - These are DEFAULT values that work out of the box
-# - You can override them in Cloudflare Dashboard without losing settings on redeploy
-# - API_KEY must always be set as a Secret in Dashboard (never put it here)
+# IMPORTANT CONFIGURATION NOTES:
 #
-# To override defaults:
-# 1. Go to Cloudflare Dashboard: Workers & Pages → Your Worker → Settings → Variables
-# 2. Add variables with same names to override defaults
-# 3. API_KEY must be added as Secret type
+# 1. PRODUCTION SETUP:
+#    Users should set all three variables in Cloudflare Dashboard:
+#    - API_URL (Text) - AI service endpoint
+#    - MODEL_NAME (Text) - Model to use
+#    - API_KEY (Secret) - API key for authentication
+#
+# 2. DEFAULT BEHAVIOR:
+#    - If variables are NOT set in Dashboard, these defaults will be used
+#    - If variables ARE set in Dashboard, they will override these defaults
+#    - Dashboard settings persist across deployments (won't be lost)
+#
+# 3. SECURITY:
+#    - API_KEY must NEVER be put in this file
+#    - API_KEY must always be set as Secret in Dashboard
+#
+# 4. CUSTOMIZATION:
+#    - Users can use any OpenAI-compatible API by setting custom API_URL
+#    - Users can use any model by setting custom MODEL_NAME

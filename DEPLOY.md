@@ -56,59 +56,69 @@
 
 ### 添加变量
 
-| 变量名 | 类型 | 配置方式 | 示例值 | 说明 |
-|--------|------|----------|--------|------|
-| `API_URL` | **Text** | 🔧 自动设置 | `https://api.openai.com/v1/chat/completions` | AI API 端点地址 |
-| `MODEL_NAME` | **Text** | 🔧 自动设置 | `gpt-3.5-turbo` | 使用的模型名称 |
-| `API_KEY` | **Secret** | 🔐 手动设置 | `sk-proj-...` | 你的 API 密钥 |
+| 变量名 | 类型 | 必需 | 示例值 | 说明 |
+|--------|------|------|--------|------|
+| `API_URL` | **Text** | ✅ | `https://api.openai.com/v1/chat/completions` | AI API 端点地址 |
+| `MODEL_NAME` | **Text** | ✅ | `gpt-3.5-turbo` | 使用的模型名称 |
+| `API_KEY` | **Secret** | ✅ | `sk-proj-...` | 你的 API 密钥 |
 
 ### 在 Dashboard 中配置
 
-**🎉 超简单配置**：现在只需要设置一个变量！
+点击 **"Add variable"** 按钮，分别添加以下三个变量：
 
-项目内置了 OpenAI 的默认配置，开箱即用。
+1. **API_URL**：
+   - Name: `API_URL`
+   - Type: **Text**
+   - Value: `https://api.openai.com/v1/chat/completions`
 
-**只需添加 API 密钥**：
+2. **MODEL_NAME**：
+   - Name: `MODEL_NAME`
+   - Type: **Text**
+   - Value: `gpt-3.5-turbo`
 
-1. 点击 **"Add variable"** 按钮
-2. **API_KEY**：
+3. **API_KEY**：
    - Name: `API_KEY`
    - Type: **Secret**（重要：必须选择 Secret）
    - Value: 你的实际 API 密钥（如：`sk-proj-...`）
-3. 点击 **"Save"**
 
-**就这么简单！** 🎉
+4. 点击 **"Save"** 保存所有变量
 
 ### 💡 配置说明
 
-**为什么现在只需要设置 API_KEY？**
+### 💡 配置说明
 
-项目采用了**智能默认值 + 可选覆盖**的配置策略：
+**为什么需要设置这三个变量？**
 
-```toml
-# wrangler.toml 中的默认配置
-[vars]
-API_URL = "https://api.openai.com/v1/chat/completions"
-MODEL_NAME = "gpt-3.5-turbo"
+- **API_URL**: 指定 AI 服务的端点，支持 OpenAI、Azure OpenAI 等
+- **MODEL_NAME**: 指定使用的模型，如 `gpt-3.5-turbo`、`gpt-4` 等
+- **API_KEY**: 访问 AI 服务的密钥，必须加密存储
+
+**配置优势**：
+- ✅ **完全自定义** - 可以使用任何兼容 OpenAI API 的服务
+- ✅ **配置持久** - Dashboard 设置不会因重新部署丢失
+- ✅ **安全可靠** - API 密钥加密存储
+- ✅ **灵活切换** - 可随时更改 API 服务或模型
+
+**常用配置示例**：
+
+**OpenAI**:
+```
+API_URL = https://api.openai.com/v1/chat/completions
+MODEL_NAME = gpt-3.5-turbo
+API_KEY = sk-proj-...
 ```
 
-**配置优先级**：
-1. **Dashboard 变量** > 2. **wrangler.toml 默认值** > 3. **代码默认值**
-
-**优势**：
-- ✅ **开箱即用** - 无需配置即可使用 OpenAI
-- ✅ **配置持久** - Dashboard 设置不会因重新部署丢失
-- ✅ **灵活覆盖** - 可自定义任何 AI 服务
-- ✅ **开源友好** - 仓库不包含用户特定配置
-
-**自定义其他 AI 服务**：
-在 Dashboard 中添加变量即可覆盖默认值：
-- 添加 `API_URL` (Text) - 如 Azure OpenAI 端点
-- 添加 `MODEL_NAME` (Text) - 如 `gpt-4` 或其他模型
+**Azure OpenAI**:
+```
+API_URL = https://your-resource.openai.azure.com/openai/deployments/gpt-35-turbo/chat/completions?api-version=2023-05-15
+MODEL_NAME = gpt-35-turbo
+API_KEY = your-azure-api-key
+```
 
 **重要**:
 - API 密钥必须使用 Secret 类型！
 - Dashboard 中的设置会永久保存，不会因重新部署丢失
+- wrangler.toml 中的默认值只在变量未设置时生效
 
 ### 使用 wrangler CLI 配置
 
