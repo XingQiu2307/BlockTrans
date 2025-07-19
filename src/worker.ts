@@ -391,43 +391,58 @@ const HTML_CONTENT = (function(): string {
         const result = document.getElementById('result');
 
         // 拖拽上传
-        uploadArea.addEventListener('dragover', function(e) {
+        uploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
             uploadArea.classList.add('dragover');
         });
 
-        uploadArea.addEventListener('dragleave', function() {
+        uploadArea.addEventListener('dragleave', () => {
             uploadArea.classList.remove('dragover');
         });
 
-        uploadArea.addEventListener('drop', function(e) {
+        uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
             uploadArea.classList.remove('dragover');
-            var files = e.dataTransfer.files;
+            console.log('File dropped');
+            const files = e.dataTransfer.files;
             if (files.length > 0) {
+                console.log('Calling handleFile from drop event');
                 handleFile(files[0]);
             }
         });
 
+        // 点击上传区域
+        uploadArea.addEventListener('click', () => {
+            console.log('Upload area clicked');
+            fileInput.click();
+        });
+
         // 文件选择
-        fileInput.addEventListener('change', function(e) {
+        fileInput.addEventListener('change', (e) => {
+            console.log('File input changed');
             if (e.target.files.length > 0) {
+                console.log('Calling handleFile from file input');
                 handleFile(e.target.files[0]);
             }
         });
 
         // 处理文件
         async function handleFile(file) {
+            console.log('handleFile called with:', file.name, file.size, 'bytes');
             const fileName = file.name.toLowerCase();
 
             if (fileName.endsWith('.zip') || fileName.endsWith('.mcaddon') || fileName.endsWith('.mcpack')) {
+                console.log('Processing as ZIP file');
                 // 处理 ZIP 格式文件
                 await handleZipFile(file);
             } else if (fileName.endsWith('.lang') || fileName.endsWith('.txt')) {
+                console.log('Processing as .lang file');
                 // 处理单个 .lang 文件
                 const content = await file.text();
+                console.log('File content length:', content.length);
                 await translateContent(content, 'lang');
             } else {
+                console.log('Unsupported file format:', fileName);
                 showNotification('❌ 不支持的文件格式。请选择 .lang、.zip、.mcaddon 或 .mcpack 文件', 'error');
                 return;
             }
@@ -451,6 +466,9 @@ const HTML_CONTENT = (function(): string {
 
         // 翻译内容
         async function translateContent(content, type = 'lang') {
+            console.log('translateContent called with type:', type);
+            console.log('Content type:', typeof content, 'Length/Size:', content.length || content.size);
+
             loading.style.display = 'block';
             result.innerHTML = '';
             resetProgress();
@@ -460,6 +478,7 @@ const HTML_CONTENT = (function(): string {
 
                 if (type === 'zip') {
                     updateProgress(10, '上传文件', '正在上传 ZIP 文件...');
+                    console.log('Making request to /api/translate-zip');
 
                     // ZIP 文件使用 FormData
                     response = await fetch('/api/translate-zip', {
@@ -470,6 +489,7 @@ const HTML_CONTENT = (function(): string {
                     updateProgress(30, '解析文件', '正在解析 ZIP 文件结构...');
                 } else {
                     updateProgress(10, '上传文件', '正在上传 .lang 文件...');
+                    console.log('Making request to /api/translate');
 
                     // .lang 文件使用文本
                     response = await fetch('/api/translate', {
@@ -481,17 +501,19 @@ const HTML_CONTENT = (function(): string {
                     updateProgress(30, '解析内容', '正在解析语言文件...');
                 }
 
+                console.log('Response received:', response.status, response.statusText);
+
                 updateProgress(50, '处理响应', '正在处理服务器响应...');
 
                 if (!response.ok) {
                     updateProgress(100, '处理失败', '服务器返回错误');
 
                     // 尝试解析错误响应
-                    var errorMessage = '翻译请求失败';
-                    var errorDetails = '';
+                    let errorMessage = '翻译请求失败';
+                    let errorDetails = '';
 
                     try {
-                        var errorData = await response.json();
+                        const errorData = await response.json();
                         if (errorData.error) {
                             errorMessage = errorData.error;
                         }
@@ -514,19 +536,19 @@ const HTML_CONTENT = (function(): string {
                     updateProgress(70, 'AI 翻译', '正在处理翻译结果...');
 
                     // ZIP 文件响应处理
-                    if (response.headers.get('content-type')?.includes('application/json')) {
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
                         updateProgress(90, '生成界面', '正在生成编辑界面...');
 
                         // 返回翻译结果供编辑
                         const zipResult = await response.json();
-
                         updateProgress(100, '完成', '翻译完成，可以编辑结果');
                         displayZipResults(zipResult);
                         return;
                     } else {
                         updateProgress(100, '处理失败', '响应格式错误');
                         // 错误响应
-                        var errorData = await response.json();
+                        const errorData = await response.json();
                         displayError(errorData.error, errorData.details || errorData.message, response.status);
                         return;
                     }
@@ -553,7 +575,7 @@ const HTML_CONTENT = (function(): string {
                 displayError('网络错误', error.message, 0);
             } finally {
                 // 延迟隐藏 loading，让用户看到最终状态
-                setTimeout(function() {
+                setTimeout(() => {
                     loading.style.display = 'none';
                 }, 1000);
             }
@@ -562,7 +584,7 @@ const HTML_CONTENT = (function(): string {
         // 显示错误信息
         function displayError(errorMessage, errorDetails, statusCode) {
             var html = '<div style="background: #ffe6e6; border: 1px solid #ff9999; padding: 15px; border-radius: 5px; margin: 10px 0;">';
-            html += '<h3 style="color: #cc0000; margin-top: 0;">❌ 翻译失败</h3>';
+            html += '<h3 style="color: #cc0000; margin-top: 0;">翻译失败</h3>';
             html += '<p><strong>错误信息:</strong> ' + errorMessage + '</p>';
 
             if (statusCode) {
@@ -575,7 +597,7 @@ const HTML_CONTENT = (function(): string {
 
             // 根据错误类型提供解决建议
             html += '<div style="background: #f0f8ff; border-left: 4px solid #0066cc; padding: 10px; margin-top: 10px;">';
-            html += '<h4 style="margin-top: 0;">💡 可能的解决方案:</h4>';
+            html += '<h4 style="margin-top: 0;">可能的解决方案:</h4>';
 
             if (errorMessage.includes('Missing required environment variables')) {
                 html += '<ul>';
@@ -608,7 +630,7 @@ const HTML_CONTENT = (function(): string {
             }
 
             html += '</div>';
-            html += '<button onclick="location.reload()" style="margin-top: 10px; background: #0066cc; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">🔄 重新尝试</button>';
+            html += '<button onclick="location.reload()" style="margin-top: 10px; background: #0066cc; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">重新尝试</button>';
             html += '</div>';
 
             result.innerHTML = html;
@@ -616,12 +638,14 @@ const HTML_CONTENT = (function(): string {
 
         // 显示结果
         function displayResults(translations) {
+            console.log('displayResults called with', translations.length, 'translations');
+
             if (translations.length === 0) {
                 result.innerHTML = '<div style="text-align: center; padding: 40px; color: #666;"><h3>📝 没有找到需要翻译的内容</h3><p>请检查文件格式是否正确</p></div>';
                 return;
             }
 
-            var html = '<div style="margin-bottom: 20px;">';
+            let html = '<div style="margin-bottom: 20px;">';
             html += '<h3 style="color: #667eea; margin-bottom: 15px;">✅ 翻译完成 (' + translations.length + ' 条)</h3>';
             html += '<p style="color: #666; margin-bottom: 20px;">您可以直接编辑译文，然后下载修改后的文件</p>';
             html += '</div>';
@@ -630,15 +654,14 @@ const HTML_CONTENT = (function(): string {
             html += '<table>';
             html += '<tr><th style="width: 25%;">键名</th><th style="width: 35%;">原文</th><th style="width: 35%;">译文</th><th style="width: 5%;">操作</th></tr>';
 
-            for (var i = 0; i < translations.length; i++) {
-                var item = translations[i];
-                html += '<tr data-index="' + i + '">' +
+            translations.forEach((item, index) => {
+                html += '<tr data-index="' + index + '">' +
                     '<td><code style="background: #f1f5f9; padding: 4px 8px; border-radius: 4px; font-size: 12px;">' + escapeHtml(item.key) + '</code></td>' +
                     '<td style="color: #374151;">' + escapeHtml(item.source) + '</td>' +
                     '<td><input type="text" class="editable-input" value="' + escapeHtml(item.translation) + '" data-key="' + escapeHtml(item.key) + '" onchange="markAsModified(this)"></td>' +
-                    '<td><button onclick="resetTranslation(' + i + ')" style="background: #ef4444; padding: 4px 8px; font-size: 12px;" title="重置为原始翻译">🔄</button></td>' +
+                    '<td><button onclick="resetTranslation(' + index + ')" style="background: #ef4444; padding: 4px 8px; font-size: 12px;" title="重置为原始翻译">🔄</button></td>' +
                 '</tr>';
-            }
+            });
 
             html += '</table>';
             html += '</div>';
@@ -674,13 +697,7 @@ const HTML_CONTENT = (function(): string {
             const newValue = input.value;
 
             if (window.currentTranslations) {
-                var item = null;
-                for (var i = 0; i < window.currentTranslations.length; i++) {
-                    if (window.currentTranslations[i].key === key) {
-                        item = window.currentTranslations[i];
-                        break;
-                    }
-                }
+                const item = window.currentTranslations.find(t => t.key === key);
                 if (item) {
                     item.translation = newValue;
                 }
@@ -690,12 +707,12 @@ const HTML_CONTENT = (function(): string {
         // 重置单个翻译
         function resetTranslation(index) {
             if (window.originalTranslations && window.currentTranslations) {
-                var original = window.originalTranslations[index];
-                var current = window.currentTranslations[index];
+                const original = window.originalTranslations[index];
+                const current = window.currentTranslations[index];
 
                 current.translation = original.translation;
 
-                var input = document.querySelector('tr[data-index="' + index + '"] .editable-input');
+                const input = document.querySelector('tr[data-index="' + index + '"] .editable-input');
                 if (input) {
                     input.value = original.translation;
                     input.style.borderColor = '#e5e7eb';
@@ -727,16 +744,30 @@ const HTML_CONTENT = (function(): string {
 
         // 复制到剪贴板
         function copyToClipboard() {
-            var content = generateLangContent();
+            const content = generateLangContent();
 
-            // 使用传统的复制方法
-            var textarea = document.createElement('textarea');
-            textarea.value = content;
+            // 优先使用现代 Clipboard API
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(content).then(() => {
+                    alert('✅ 内容已复制到剪贴板！');
+                }).catch(() => {
+                    // 降级方案
+                    fallbackCopyTextToClipboard(content);
+                });
+            } else {
+                // 降级方案
+                fallbackCopyTextToClipboard(content);
+            }
+        }
+
+        function fallbackCopyTextToClipboard(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
             document.body.appendChild(textarea);
             textarea.select();
 
             try {
-                var successful = document.execCommand('copy');
+                const successful = document.execCommand('copy');
                 if (successful) {
                     alert('✅ 内容已复制到剪贴板！');
                 } else {
@@ -751,13 +782,12 @@ const HTML_CONTENT = (function(): string {
 
         // 生成 .lang 文件内容
         function generateLangContent() {
-            var translations = window.currentTranslations || [];
-            var content = '';
+            const translations = window.currentTranslations || [];
+            let content = '';
 
-            for (var i = 0; i < translations.length; i++) {
-                var item = translations[i];
+            translations.forEach(item => {
                 content += item.key + '=' + item.translation + '\n';
-            }
+            });
 
             return content;
         }
@@ -767,7 +797,7 @@ const HTML_CONTENT = (function(): string {
             const content = generateLangContent();
 
             if (!content.trim()) {
-                alert('❌ 没有可下载的内容');
+                alert('没有可下载的内容');
                 return;
             }
 
@@ -798,20 +828,20 @@ const HTML_CONTENT = (function(): string {
             URL.revokeObjectURL(url);
 
             // 显示成功提示
-            showNotification('✅ 文件下载成功！', 'success');
+            showNotification('文件下载成功！', 'success');
         }
 
         // 显示 ZIP 翻译结果
         function displayZipResults(zipResult) {
             var html = '<div class="zip-results">';
-            html += '<h3>📦 附加包翻译结果</h3>';
+            html += '<h3>附加包翻译结果</h3>';
             html += '<p style="color: #666; margin-bottom: 20px;">请检查并编辑翻译结果，确认后将重新打包为附加包</p>';
 
             // 为每个翻译文件创建编辑区域
             for (var fileIndex = 0; fileIndex < zipResult.translatedFiles.length; fileIndex++) {
                 var file = zipResult.translatedFiles[fileIndex];
                 html += '<div class="file-section" style="margin-bottom: 30px; border: 1px solid #ddd; border-radius: 8px; padding: 20px;">';
-                html += '<h4 style="color: #667eea; margin-bottom: 15px;">📄 ' + file.path + '</h4>';
+                html += '<h4 style="color: #667eea; margin-bottom: 15px;">' + file.path + '</h4>';
                 html += '<div class="translation-grid">';
 
                 for (var index = 0; index < file.translations.length; index++) {
@@ -827,7 +857,7 @@ const HTML_CONTENT = (function(): string {
             }
 
             html += '<div class="action-buttons">';
-            html += '<button onclick="downloadZipResult()" class="download-btn">📦 下载翻译后的附加包</button>';
+            html += '<button onclick="downloadZipResult()" class="download-btn">下载翻译后的附加包</button>';
             html += '</div>';
             html += '</div>';
 
@@ -838,9 +868,9 @@ const HTML_CONTENT = (function(): string {
         }
 
         // 下载 ZIP 翻译结果
-        async function downloadZipResult() {
+        function downloadZipResult() {
             if (!window.currentZipResult) {
-                showNotification('❌ 没有可下载的翻译结果', 'error');
+                showNotification('没有可下载的翻译结果', 'error');
                 return;
             }
 
@@ -849,7 +879,7 @@ const HTML_CONTENT = (function(): string {
                 loading.style.display = 'block';
                 updateProgress(10, '准备打包', '正在收集翻译内容...');
 
-                showNotification('📦 正在重新打包附加包...', 'info');
+                showNotification('正在重新打包附加包...', 'info');
 
                 updateProgress(30, '收集内容', '正在收集用户编辑的翻译...');
 
@@ -874,7 +904,7 @@ const HTML_CONTENT = (function(): string {
                 updateProgress(50, '重新打包', '正在重新打包附加包...');
 
                 // 调用重新打包 API
-                const response = await fetch('/api/repack-zip', {
+                fetch('/api/repack-zip', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -883,35 +913,66 @@ const HTML_CONTENT = (function(): string {
                         translatedFiles: updatedFiles,
                         zipData: window.currentZipResult.zipData
                     })
+                }).then(function(response) {
+                    updateProgress(80, '处理响应', '正在处理服务器响应...');
+
+                    if (response.ok) {
+                        updateProgress(95, '准备下载', '正在准备下载文件...');
+
+                        response.blob().then(function(blob) {
+                            var url = URL.createObjectURL(blob);
+                            var a = document.createElement('a');
+                            a.href = url;
+
+                            var contentDisposition = response.headers.get('content-disposition');
+                            var filename = 'translated_addon.zip';
+                            if (contentDisposition) {
+                                var parts = contentDisposition.split('filename=');
+                                if (parts.length > 1) {
+                                    filename = parts[1].replace(/"/g, '');
+                                }
+                            }
+                            a.download = filename;
+
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(url);
+
+                            updateProgress(100, '下载完成', '翻译后的附加包已下载');
+                            showNotification('翻译后的附加包已下载！', 'success');
+
+                            // 延迟隐藏进度条
+                            setTimeout(function() {
+                                loading.style.display = 'none';
+                            }, 2000);
+                        });
+                    } else {
+                        updateProgress(100, '打包失败', '服务器返回错误');
+                        response.json().then(function(errorData) {
+                            showNotification('重新打包失败: ' + errorData.error, 'error');
+
+                            // 延迟隐藏进度条
+                            setTimeout(function() {
+                                loading.style.display = 'none';
+                            }, 2000);
+                        });
+                    }
+                }).catch(function(error) {
+                    updateProgress(100, '下载失败', error.message);
+                    console.error('Download ZIP result error:', error);
+                    showNotification('下载失败: ' + error.message, 'error');
+
+                    // 延迟隐藏进度条
+                    setTimeout(function() {
+                        loading.style.display = 'none';
+                    }, 2000);
                 });
-
-                updateProgress(80, '处理响应', '正在处理服务器响应...');
-
-                if (response.ok) {
-                    updateProgress(95, '准备下载', '正在准备下载文件...');
-
-                    const blob = await response.blob();
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = response.headers.get('content-disposition')?.split('filename=')[1]?.replace(/"/g, '') || 'translated_addon.zip';
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-
-                    updateProgress(100, '下载完成', '翻译后的附加包已下载');
-                    showNotification('✅ 翻译后的附加包已下载！', 'success');
-                } else {
-                    updateProgress(100, '打包失败', '服务器返回错误');
-                    var errorData = await response.json();
-                    showNotification('❌ 重新打包失败: ' + errorData.error, 'error');
-                }
             } catch (error) {
                 updateProgress(100, '下载失败', error.message);
                 console.error('Download ZIP result error:', error);
-                showNotification('❌ 下载失败: ' + error.message, 'error');
-            } finally {
+                showNotification('下载失败: ' + error.message, 'error');
+
                 // 延迟隐藏进度条
                 setTimeout(function() {
                     loading.style.display = 'none';
