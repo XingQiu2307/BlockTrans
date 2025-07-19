@@ -196,8 +196,29 @@ export default {
 // 处理翻译 API
 async function handleTranslateAPI(request: Request, env: Env, corsHeaders: Record<string, string>): Promise<Response> {
   try {
+    // 检查环境变量
+    if (!env.API_URL || !env.MODEL_NAME || !env.API_KEY) {
+      console.error('Missing environment variables:', {
+        API_URL: !!env.API_URL,
+        MODEL_NAME: !!env.MODEL_NAME,
+        API_KEY: !!env.API_KEY
+      });
+      return new Response(JSON.stringify({
+        error: 'Server configuration error: Missing required environment variables'
+      }), {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json',
+        },
+      });
+    }
+
     const langFileContent = await request.text();
+    console.log('Received content length:', langFileContent.length);
+
     const itemsToTranslate = parseLangFile(langFileContent);
+    console.log('Parsed items:', itemsToTranslate.length);
 
     if (itemsToTranslate.length === 0) {
       return new Response(JSON.stringify([]), {
@@ -210,6 +231,9 @@ async function handleTranslateAPI(request: Request, env: Env, corsHeaders: Recor
 
     const textsToTranslate = itemsToTranslate.map(item => item.value);
 
+    console.log('Calling AI API:', env.API_URL);
+    console.log('Using model:', env.MODEL_NAME);
+
     const aiResponse = await fetch(env.API_URL, {
       method: 'POST',
       headers: {
@@ -218,18 +242,40 @@ async function handleTranslateAPI(request: Request, env: Env, corsHeaders: Recor
       },
       body: JSON.stringify({
         model: env.MODEL_NAME,
-        prompt: createTranslationPrompt(textsToTranslate),
+        messages: [
+          {
+            role: 'user',
+            content: createTranslationPrompt(textsToTranslate)
+          }
+        ],
+        max_tokens: 2000,
+        temperature: 0.3
       }),
     });
 
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
-      console.error('AI API Error:', errorText);
-      throw new Error(`AI API request failed with status ${aiResponse.status}`);
+      console.error('AI API Error:', aiResponse.status, errorText);
+      return new Response(JSON.stringify({
+        error: `AI API request failed with status ${aiResponse.status}`,
+        details: errorText
+      }), {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json',
+        },
+      });
     }
 
-    const aiResult = await aiResponse.json() as { translation: string };
-    const translatedTexts = aiResult.translation.split('\n');
+    const aiResult = await aiResponse.json() as { choices: Array<{ message: { content: string } }> };
+    console.log('AI Response:', aiResult);
+
+    if (!aiResult.choices || !aiResult.choices[0] || !aiResult.choices[0].message) {
+      throw new Error('Invalid AI API response format');
+    }
+
+    const translatedTexts = aiResult.choices[0].message.content.split('\n').filter(line => line.trim());
 
     if (translatedTexts.length !== itemsToTranslate.length) {
       throw new Error('Mismatch between original and translated item count.');
@@ -249,9 +295,16 @@ async function handleTranslateAPI(request: Request, env: Env, corsHeaders: Recor
     });
   } catch (error) {
     console.error('Translation failed:', error);
-    return new Response('An error occurred during translation.', { 
-      status: 500, 
-      headers: corsHeaders 
+    return new Response(JSON.stringify({
+      error: 'Translation failed',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      details: 'Please check your environment variables and API configuration'
+    }), {
+      status: 500,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json',
+      }
     });
   }
 }

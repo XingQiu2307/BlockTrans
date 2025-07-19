@@ -58,18 +58,36 @@
 
 | 变量名 | 类型 | 必需 | 示例值 | 说明 |
 |--------|------|------|--------|------|
-| `API_URL` | 环境变量 | ✅ | `https://api.openai.com/v1/chat/completions` | AI API 端点地址 |
-| `MODEL_NAME` | 环境变量 | ✅ | `gpt-3.5-turbo` | 使用的模型名称 |
-| `API_KEY` | **密钥** | ✅ | `sk-proj-...` | 你的 API 密钥 |
+| `API_URL` | **Text** | ✅ | `https://api.openai.com/v1/chat/completions` | AI API 端点地址 |
+| `MODEL_NAME` | **Text** | ✅ | `gpt-3.5-turbo` | 使用的模型名称 |
+| `API_KEY` | **Secret** | ✅ | `sk-proj-...` | 你的 API 密钥 |
 
 ### 在 Dashboard 中配置
 
-1. **环境变量**（Environment Variables）：
-   - 添加 `API_URL` = `https://api.openai.com/v1/chat/completions`
-   - 添加 `MODEL_NAME` = `gpt-3.5-turbo`
+点击 **"Add variable"** 按钮，分别添加：
 
-2. **密钥**（Secrets）：
-   - 添加 `API_KEY` = 你的实际 API 密钥
+1. **API_URL**：
+   - Name: `API_URL`
+   - Type: **Text**
+   - Value: `https://api.openai.com/v1/chat/completions`
+
+2. **MODEL_NAME**：
+   - Name: `MODEL_NAME`
+   - Type: **Text**
+   - Value: `gpt-3.5-turbo`
+
+3. **API_KEY**：
+   - Name: `API_KEY`
+   - Type: **Secret**
+   - Value: 你的实际 API 密钥
+
+### 💡 变量类型说明
+
+- **Text**: 普通文本，适用于非敏感配置
+- **Secret**: 加密存储，适用于 API 密钥等敏感信息
+- **JSON**: JSON 格式，适用于复杂配置对象
+
+**重要**: API 密钥等敏感信息必须使用 Secret 类型！
 
 ### 使用 wrangler CLI 配置
 

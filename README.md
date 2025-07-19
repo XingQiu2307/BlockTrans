@@ -98,16 +98,18 @@ BlockTrans/
 
 | 变量名 | 类型 | 必需 | 说明 | 示例值 |
 |--------|------|------|------|--------|
-| `API_URL` | 环境变量 | ✅ | AI API 端点地址 | `https://api.openai.com/v1/chat/completions` |
-| `MODEL_NAME` | 环境变量 | ✅ | 使用的模型名称 | `gpt-3.5-turbo` |
-| `API_KEY` | **密钥** | ✅ | API 密钥（加密存储） | `sk-proj-...` |
+| `API_URL` | **Text** | ✅ | AI API 端点地址 | `https://api.openai.com/v1/chat/completions` |
+| `MODEL_NAME` | **Text** | ✅ | 使用的模型名称 | `gpt-3.5-turbo` |
+| `API_KEY` | **Secret** | ✅ | API 密钥（加密存储） | `sk-proj-...` |
 
 ### 配置方式
 
 #### 方式一：Cloudflare Dashboard（推荐）
 1. 进入 Workers & Pages → 选择你的 Worker → Settings → Variables
-2. 在 **Environment Variables** 部分添加 `API_URL` 和 `MODEL_NAME`
-3. 在 **Secrets** 部分添加 `API_KEY`（加密存储）
+2. 点击 **"Add variable"** 添加以下变量：
+   - `API_URL` - 选择类型 **"Text"**
+   - `MODEL_NAME` - 选择类型 **"Text"**
+   - `API_KEY` - 选择类型 **"Secret"**（加密存储）
 
 #### 方式二：wrangler CLI
 ```bash
@@ -120,10 +122,21 @@ wrangler secret put API_KEY
 wrangler secret put API_KEY  # 推荐：密钥方式
 ```
 
+### 📝 Cloudflare Workers 变量类型说明
+
+Cloudflare Workers 支持三种变量类型：
+
+| 类型 | 用途 | 安全性 | 适用场景 |
+|------|------|--------|----------|
+| **Text** | 普通文本变量 | 🔓 可见 | 非敏感配置（API_URL, MODEL_NAME） |
+| **Secret** | 加密存储变量 | 🔒 加密 | 敏感信息（API_KEY, 密码） |
+| **JSON** | JSON 格式数据 | 🔓 可见 | 复杂配置对象 |
+
 **⚠️ 重要提醒**：
-- `API_KEY` **必须**设置为 **Secret**（密钥），不能设置为普通环境变量
-- Secrets 是加密存储的，更安全
-- 普通环境变量在日志中可能被看到
+- `API_URL` 和 `MODEL_NAME` 设置为 **Text** 类型
+- `API_KEY` **必须**设置为 **Secret** 类型，不能设置为 Text
+- Secret 类型是加密存储的，更安全
+- Text 类型的变量在日志中可能被看到，所以敏感信息要用 Secret
 
 ### 🚀 快速配置示例
 
@@ -225,12 +238,30 @@ API_KEY = your-azure-api-key
    - 点击一键部署按钮，或使用 `wrangler deploy` 命令
    - 无需设置构建命令，Worker 直接部署源代码
 
-3. **翻译功能不工作**
-   - 确认环境变量已在 Cloudflare Workers 中设置
-   - 检查 `API_KEY` 是否设置为 **Secret**（不是普通变量）
-   - 验证 API_URL 格式是否正确
+3. **翻译功能不工作（500 错误）**
+   - **检查环境变量**：确认在 Cloudflare Workers 中已设置所有必需变量
+     - `API_URL` (Text 类型)
+     - `MODEL_NAME` (Text 类型)
+     - `API_KEY` (Secret 类型)
+   - **检查 API 密钥**：确保 API 密钥有效且有足够余额
+   - **检查 API_URL**：确保 URL 格式正确，如 `https://api.openai.com/v1/chat/completions`
+   - **查看日志**：在 Worker 设置中查看 Logs 标签页，查看具体错误信息
 
-4. **Worker 优势说明**
+4. **快速诊断 500 错误**
+   ```bash
+   # 使用 wrangler 查看实时日志
+   wrangler tail
+
+   # 或者在浏览器中查看
+   # Cloudflare Dashboard → Workers & Pages → 你的 Worker → Logs
+   ```
+
+   常见错误信息：
+   - `Missing environment variables` → 环境变量未设置
+   - `AI API request failed` → API 密钥或 URL 错误
+   - `Invalid AI API response format` → API 响应格式问题
+
+5. **Worker 优势说明**
    - ✅ **更简单** - 无需复杂的构建配置
    - ✅ **更快** - 冷启动时间更短
    - ✅ **更便宜** - 免费额度更高
