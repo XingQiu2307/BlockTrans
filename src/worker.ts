@@ -330,7 +330,7 @@ const HTML_CONTENT = (function(): string {
                 </div>
                 <p>拖拽文件到这里，或点击按钮选择文件</p>
                 <input type="file" id="fileInput" accept=".lang,.txt,.zip,.mcaddon,.mcpack" style="display: none;">
-                <button onclick="document.getElementById('fileInput').click()">📂 选择文件</button>
+                <button id="selectFileBtn">📂 选择文件</button>
             </div>
 
             <div class="loading" id="loading">
@@ -411,10 +411,26 @@ const HTML_CONTENT = (function(): string {
             }
         });
 
-        // 点击上传区域
-        uploadArea.addEventListener('click', () => {
-            console.log('Upload area clicked');
+        // 点击上传区域或选择文件按钮
+        const selectFileBtn = document.getElementById('selectFileBtn');
+
+        function triggerFileSelect() {
+            console.log('Triggering file select');
             fileInput.click();
+        }
+
+        uploadArea.addEventListener('click', (e) => {
+            // 如果点击的是按钮，不要重复触发
+            if (e.target.id !== 'selectFileBtn') {
+                console.log('Upload area clicked');
+                triggerFileSelect();
+            }
+        });
+
+        selectFileBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // 防止冒泡到 uploadArea
+            console.log('Select file button clicked');
+            triggerFileSelect();
         });
 
         // 文件选择
@@ -630,7 +646,7 @@ const HTML_CONTENT = (function(): string {
             }
 
             html += '</div>';
-            html += '<button onclick="location.reload()" style="margin-top: 10px; background: #0066cc; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">重新尝试</button>';
+            html += '<button id="retryBtn" style="margin-top: 10px; background: #0066cc; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">重新尝试</button>';
             html += '</div>';
 
             result.innerHTML = html;
@@ -658,8 +674,8 @@ const HTML_CONTENT = (function(): string {
                 html += '<tr data-index="' + index + '">' +
                     '<td><code style="background: #f1f5f9; padding: 4px 8px; border-radius: 4px; font-size: 12px;">' + escapeHtml(item.key) + '</code></td>' +
                     '<td style="color: #374151;">' + escapeHtml(item.source) + '</td>' +
-                    '<td><input type="text" class="editable-input" value="' + escapeHtml(item.translation) + '" data-key="' + escapeHtml(item.key) + '" onchange="markAsModified(this)"></td>' +
-                    '<td><button onclick="resetTranslation(' + index + ')" style="background: #ef4444; padding: 4px 8px; font-size: 12px;" title="重置为原始翻译">🔄</button></td>' +
+                    '<td><input type="text" class="editable-input" value="' + escapeHtml(item.translation) + '" data-key="' + escapeHtml(item.key) + '"></td>' +
+                    '<td><button class="reset-btn" data-index="' + index + '" style="background: #ef4444; padding: 4px 8px; font-size: 12px;" title="重置为原始翻译">🔄</button></td>' +
                 '</tr>';
             });
 
@@ -667,10 +683,10 @@ const HTML_CONTENT = (function(): string {
             html += '</div>';
 
             html += '<div class="action-buttons">';
-            html += '<button onclick="downloadResult()" class="btn-success">💾 下载翻译文件</button>';
-            html += '<button onclick="previewResult()" class="btn-secondary">👁️ 预览内容</button>';
-            html += '<button onclick="copyToClipboard()" class="btn-secondary">📋 复制到剪贴板</button>';
-            html += '<button onclick="resetAllTranslations()">🔄 重置所有翻译</button>';
+            html += '<button id="downloadBtn" class="btn-success">💾 下载翻译文件</button>';
+            html += '<button id="previewBtn" class="btn-secondary">👁️ 预览内容</button>';
+            html += '<button id="copyBtn" class="btn-secondary">📋 复制到剪贴板</button>';
+            html += '<button id="resetAllBtn">🔄 重置所有翻译</button>';
             html += '</div>';
 
             // 存储原始翻译数据
@@ -678,6 +694,9 @@ const HTML_CONTENT = (function(): string {
             window.currentTranslations = translations;
 
             result.innerHTML = html;
+
+            // 添加事件委托
+            setupEventDelegation();
         }
 
         // HTML 转义函数
@@ -685,6 +704,42 @@ const HTML_CONTENT = (function(): string {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        // 设置事件委托
+        function setupEventDelegation() {
+            // 移除之前的事件监听器（如果存在）
+            result.removeEventListener('change', handleInputChange);
+            result.removeEventListener('click', handleButtonClick);
+
+            // 添加新的事件监听器
+            result.addEventListener('change', handleInputChange);
+            result.addEventListener('click', handleButtonClick);
+        }
+
+        function handleInputChange(e) {
+            if (e.target.classList.contains('editable-input')) {
+                markAsModified(e.target);
+            }
+        }
+
+        function handleButtonClick(e) {
+            if (e.target.classList.contains('reset-btn')) {
+                const index = parseInt(e.target.getAttribute('data-index'));
+                resetTranslation(index);
+            } else if (e.target.id === 'retryBtn') {
+                location.reload();
+            } else if (e.target.id === 'downloadBtn') {
+                downloadResult();
+            } else if (e.target.id === 'previewBtn') {
+                previewResult();
+            } else if (e.target.id === 'copyBtn') {
+                copyToClipboard();
+            } else if (e.target.id === 'resetAllBtn') {
+                resetAllTranslations();
+            } else if (e.target.id === 'downloadZipBtn') {
+                downloadZipResult();
+            }
         }
 
         // 标记为已修改
@@ -749,7 +804,7 @@ const HTML_CONTENT = (function(): string {
             // 优先使用现代 Clipboard API
             if (navigator.clipboard && window.isSecureContext) {
                 navigator.clipboard.writeText(content).then(() => {
-                    alert('✅ 内容已复制到剪贴板！');
+                    alert('内容已复制到剪贴板！');
                 }).catch(() => {
                     // 降级方案
                     fallbackCopyTextToClipboard(content);
@@ -769,12 +824,12 @@ const HTML_CONTENT = (function(): string {
             try {
                 const successful = document.execCommand('copy');
                 if (successful) {
-                    alert('✅ 内容已复制到剪贴板！');
+                    alert('内容已复制到剪贴板！');
                 } else {
-                    alert('❌ 复制失败，请手动复制');
+                    alert('复制失败，请手动复制');
                 }
             } catch (err) {
-                alert('❌ 复制失败，请手动复制');
+                alert('复制失败，请手动复制');
             }
 
             document.body.removeChild(textarea);
@@ -857,7 +912,7 @@ const HTML_CONTENT = (function(): string {
             }
 
             html += '<div class="action-buttons">';
-            html += '<button onclick="downloadZipResult()" class="download-btn">下载翻译后的附加包</button>';
+            html += '<button id="downloadZipBtn" class="download-btn">下载翻译后的附加包</button>';
             html += '</div>';
             html += '</div>';
 
@@ -865,6 +920,9 @@ const HTML_CONTENT = (function(): string {
 
             // 保存 ZIP 结果数据到全局变量
             window.currentZipResult = zipResult;
+
+            // 添加事件委托
+            setupEventDelegation();
         }
 
         // 下载 ZIP 翻译结果
@@ -980,12 +1038,7 @@ const HTML_CONTENT = (function(): string {
             }
         }
 
-        // HTML 转义函数
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
+        // HTML 转义函数已在上面定义
 
         // 进度条控制函数
         function updateProgress(percentage, text, details = '') {
@@ -1009,20 +1062,29 @@ const HTML_CONTENT = (function(): string {
         function showNotification(message, type) {
             type = type || 'info';
             const notification = document.createElement('div');
-            const bgColor = type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6';
-            notification.style.cssText =
-                'position: fixed;' +
-                'top: 20px;' +
-                'right: 20px;' +
-                'background: ' + bgColor + ';' +
-                'color: white;' +
-                'padding: 15px 20px;' +
-                'border-radius: 10px;' +
-                'box-shadow: 0 4px 15px rgba(0,0,0,0.2);' +
-                'z-index: 1000;' +
-                'font-weight: 500;' +
-                'transform: translateX(100%);' +
-                'transition: transform 0.3s ease;';
+
+            // 设置样式 - 使用单独的属性设置避免字符串拼接问题
+            notification.style.position = 'fixed';
+            notification.style.top = '20px';
+            notification.style.right = '20px';
+            notification.style.color = 'white';
+            notification.style.padding = '15px 20px';
+            notification.style.borderRadius = '10px';
+            notification.style.boxShadow = '0 4px 15px rgba(0,0,0,0.2)';
+            notification.style.zIndex = '1000';
+            notification.style.fontWeight = '500';
+            notification.style.transform = 'translateX(100%)';
+            notification.style.transition = 'transform 0.3s ease';
+
+            // 根据类型设置背景色
+            if (type === 'success') {
+                notification.style.background = '#10b981';
+            } else if (type === 'error') {
+                notification.style.background = '#ef4444';
+            } else {
+                notification.style.background = '#3b82f6';
+            }
+
             notification.textContent = message;
 
             document.body.appendChild(notification);
