@@ -331,7 +331,13 @@ const HTML_CONTENT = `<!DOCTYPE html>
 
             <div class="loading" id="loading">
                 <div class="loading-spinner"></div>
-                <p>🤖 AI 正在翻译中，请稍候...</p>
+                <div id="progressContainer" style="margin: 20px 0; max-width: 400px; margin-left: auto; margin-right: auto;">
+                    <div id="progressBar" style="width: 100%; height: 20px; background: #f0f0f0; border-radius: 10px; overflow: hidden; margin: 10px 0;">
+                        <div id="progressFill" style="height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); width: 0%; transition: width 0.3s ease;"></div>
+                    </div>
+                    <div id="progressText" style="color: #667eea; font-size: 1rem; font-weight: bold;">准备中...</div>
+                    <div id="progressDetails" style="color: #999; font-size: 0.9rem; margin-top: 5px;">正在初始化...</div>
+                </div>
             </div>
 
             <div class="result" id="result"></div>
@@ -442,26 +448,39 @@ const HTML_CONTENT = `<!DOCTYPE html>
         async function translateContent(content, type = 'lang') {
             loading.style.display = 'block';
             result.innerHTML = '';
+            resetProgress();
 
             try {
                 let response;
 
                 if (type === 'zip') {
+                    updateProgress(10, '上传文件', '正在上传 ZIP 文件...');
+
                     // ZIP 文件使用 FormData
                     response = await fetch('/api/translate-zip', {
                         method: 'POST',
                         body: content
                     });
+
+                    updateProgress(30, '解析文件', '正在解析 ZIP 文件结构...');
                 } else {
+                    updateProgress(10, '上传文件', '正在上传 .lang 文件...');
+
                     // .lang 文件使用文本
                     response = await fetch('/api/translate', {
                         method: 'POST',
                         headers: { 'Content-Type': 'text/plain' },
                         body: content
                     });
+
+                    updateProgress(30, '解析内容', '正在解析语言文件...');
                 }
 
+                updateProgress(50, '处理响应', '正在处理服务器响应...');
+
                 if (!response.ok) {
+                    updateProgress(100, '处理失败', '服务器返回错误');
+
                     // 尝试解析错误响应
                     let errorMessage = '翻译请求失败';
                     let errorDetails = '';
@@ -487,34 +506,51 @@ const HTML_CONTENT = `<!DOCTYPE html>
                 }
 
                 if (type === 'zip') {
+                    updateProgress(70, 'AI 翻译', '正在处理翻译结果...');
+
                     // ZIP 文件响应处理
                     if (response.headers.get('content-type')?.includes('application/json')) {
+                        updateProgress(90, '生成界面', '正在生成编辑界面...');
+
                         // 返回翻译结果供编辑
                         const zipResult = await response.json();
+
+                        updateProgress(100, '完成', '翻译完成，可以编辑结果');
                         displayZipResults(zipResult);
                         return;
                     } else {
+                        updateProgress(100, '处理失败', '响应格式错误');
                         // 错误响应
                         const errorData = await response.json();
                         displayError(errorData.error, errorData.details || errorData.message, response.status);
                         return;
                     }
                 } else {
+                    updateProgress(70, 'AI 翻译', '正在处理翻译结果...');
+
                     // .lang 文件响应处理
                     const translations = await response.json();
 
+                    updateProgress(90, '生成界面', '正在生成编辑界面...');
+
                     // 检查是否返回了错误对象而不是翻译数组
                     if (translations.error) {
+                        updateProgress(100, '翻译失败', translations.error);
                         displayError(translations.error, translations.details || translations.message, response.status);
                         return;
                     }
 
+                    updateProgress(100, '完成', '翻译完成，可以编辑结果');
                     displayResults(translations);
                 }
             } catch (error) {
+                updateProgress(100, '网络错误', error.message);
                 displayError('网络错误', error.message, 0);
             } finally {
-                loading.style.display = 'none';
+                // 延迟隐藏 loading，让用户看到最终状态
+                setTimeout(() => {
+                    loading.style.display = 'none';
+                }, 1000);
             }
         }
 
@@ -780,7 +816,13 @@ const HTML_CONTENT = `<!DOCTYPE html>
             }
 
             try {
+                // 显示进度条
+                loading.style.display = 'block';
+                updateProgress(10, '准备打包', '正在收集翻译内容...');
+
                 showNotification('📦 正在重新打包附加包...', 'info');
+
+                updateProgress(30, '收集内容', '正在收集用户编辑的翻译...');
 
                 // 收集用户编辑后的翻译内容
                 const updatedFiles = window.currentZipResult.translatedFiles.map((file, fileIndex) => {
@@ -797,6 +839,8 @@ const HTML_CONTENT = `<!DOCTYPE html>
                     };
                 });
 
+                updateProgress(50, '重新打包', '正在重新打包附加包...');
+
                 // 调用重新打包 API
                 const response = await fetch('/api/repack-zip', {
                     method: 'POST',
@@ -809,7 +853,11 @@ const HTML_CONTENT = `<!DOCTYPE html>
                     })
                 });
 
+                updateProgress(80, '处理响应', '正在处理服务器响应...');
+
                 if (response.ok) {
+                    updateProgress(95, '准备下载', '正在准备下载文件...');
+
                     const blob = await response.blob();
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
@@ -820,14 +868,22 @@ const HTML_CONTENT = `<!DOCTYPE html>
                     document.body.removeChild(a);
                     URL.revokeObjectURL(url);
 
+                    updateProgress(100, '下载完成', '翻译后的附加包已下载');
                     showNotification('✅ 翻译后的附加包已下载！', 'success');
                 } else {
+                    updateProgress(100, '打包失败', '服务器返回错误');
                     const errorData = await response.json();
                     showNotification('❌ 重新打包失败: ' + errorData.error, 'error');
                 }
             } catch (error) {
+                updateProgress(100, '下载失败', error.message);
                 console.error('Download ZIP result error:', error);
                 showNotification('❌ 下载失败: ' + error.message, 'error');
+            } finally {
+                // 延迟隐藏进度条
+                setTimeout(() => {
+                    loading.style.display = 'none';
+                }, 2000);
             }
         }
 
@@ -836,6 +892,24 @@ const HTML_CONTENT = `<!DOCTYPE html>
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        // 进度条控制函数
+        function updateProgress(percentage, text, details = '') {
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            const progressDetails = document.getElementById('progressDetails');
+
+            if (progressFill) progressFill.style.width = percentage + '%';
+            if (progressText) progressText.textContent = text;
+            if (progressDetails) progressDetails.textContent = details;
+
+            console.log(`Progress: ${percentage}% - ${text} - ${details}`);
+        }
+
+        // 重置进度条
+        function resetProgress() {
+            updateProgress(0, '准备中...', '正在初始化...');
         }
 
         // 显示通知
