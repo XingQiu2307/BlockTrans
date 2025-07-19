@@ -432,7 +432,7 @@ const HTML_CONTENT = (function(): string {
                 console.log('File input changed');
                 if (e.target.files && e.target.files.length > 0) {
                     console.log('File selected:', e.target.files[0].name);
-                    alert('文件已选择: ' + e.target.files[0].name);
+                    handleFile(e.target.files[0]);
                 } else {
                     console.log('No files selected');
                 }
@@ -440,6 +440,95 @@ const HTML_CONTENT = (function(): string {
             console.log('Change event bound to fileInput');
         } else {
             console.error('fileInput element not found for change event');
+        }
+
+        // 处理文件
+        function handleFile(file) {
+            console.log('handleFile called with:', file.name, file.size, 'bytes');
+            var fileName = file.name.toLowerCase();
+
+            if (fileName.endsWith('.zip') || fileName.endsWith('.mcaddon') || fileName.endsWith('.mcpack')) {
+                console.log('Processing as ZIP file');
+                alert('ZIP 文件处理功能暂时禁用');
+            } else if (fileName.endsWith('.lang') || fileName.endsWith('.txt')) {
+                console.log('Processing as .lang file');
+                file.text().then(function(content) {
+                    console.log('File content length:', content.length);
+                    translateContent(content, 'lang');
+                });
+            } else {
+                console.log('Unsupported file format:', fileName);
+                alert('不支持的文件格式: ' + fileName);
+            }
+        }
+
+        // 基本的 UI 函数
+        function updateProgress(percentage, text, details) {
+            console.log('Progress: ' + percentage + '% - ' + text + ' - ' + details);
+            var progressFill = document.getElementById('progressFill');
+            var progressText = document.getElementById('progressText');
+            var progressDetails = document.getElementById('progressDetails');
+
+            if (progressFill) progressFill.style.width = percentage + '%';
+            if (progressText) progressText.textContent = text;
+            if (progressDetails) progressDetails.textContent = details;
+        }
+
+        function resetProgress() {
+            updateProgress(0, '准备中...', '正在初始化...');
+        }
+
+        function showNotification(message, type) {
+            console.log('Notification (' + (type || 'info') + '): ' + message);
+            alert(message);
+        }
+
+        // 翻译内容
+        function translateContent(content, type) {
+            console.log('translateContent called with type:', type);
+            console.log('Content length:', content.length);
+
+            if (loading) loading.style.display = 'block';
+            if (result) result.innerHTML = '';
+            resetProgress();
+
+            try {
+                updateProgress(10, '上传文件', '正在上传 .lang 文件...');
+
+                fetch('/api/translate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: content
+                }).then(function(response) {
+                    updateProgress(50, '处理响应', '正在处理服务器响应...');
+                    console.log('Response received:', response.status, response.statusText);
+
+                    if (!response.ok) {
+                        updateProgress(100, '处理失败', '服务器返回错误');
+                        showNotification('翻译请求失败: ' + response.status, 'error');
+                        return;
+                    }
+
+                    return response.json();
+                }).then(function(translations) {
+                    if (translations) {
+                        updateProgress(100, '完成', '翻译完成');
+                        console.log('Translations received:', translations.length);
+                        showNotification('翻译完成，共 ' + translations.length + ' 条', 'success');
+                    }
+                }).catch(function(error) {
+                    updateProgress(100, '网络错误', error.message);
+                    console.error('Translation error:', error);
+                    showNotification('网络错误: ' + error.message, 'error');
+                }).finally(function() {
+                    setTimeout(function() {
+                        if (loading) loading.style.display = 'none';
+                    }, 1000);
+                });
+            } catch (error) {
+                console.error('Translation error:', error);
+                showNotification('翻译失败: ' + error.message, 'error');
+            }
         }
 
         console.log('Basic script setup complete');
