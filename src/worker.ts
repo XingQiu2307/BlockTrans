@@ -1120,17 +1120,40 @@ async function handleTranslateZipAPI(request: Request, env: Env, corsHeaders: Re
     const zipBuffer = await file.arrayBuffer();
     const zipData = new Uint8Array(zipBuffer);
 
+    console.log('ZIP data size:', zipData.length);
+
     // 解析 ZIP 文件并提取 .lang 文件
     const langFiles = await extractLangFilesFromZip(zipData);
 
+    console.log('Extracted lang files count:', langFiles.length);
+
     if (langFiles.length === 0) {
-      return new Response(JSON.stringify({
-        error: 'No .lang files found in the uploaded package',
-        details: 'Please ensure your addon contains .lang files in res/texts/ directory'
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+      // 尝试列出 ZIP 中的所有文件来调试
+      try {
+        const allFiles = await extractAllFilesFromZip(zipData);
+        console.log('All files in ZIP:', allFiles.map(f => f.name));
+
+        return new Response(JSON.stringify({
+          error: 'No .lang files found in the uploaded package',
+          details: 'Please ensure your addon contains .lang files in texts/ directory',
+          debug: {
+            totalFiles: allFiles.length,
+            fileList: allFiles.map(f => f.name).slice(0, 10) // 只显示前10个文件
+          }
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      } catch (debugError) {
+        console.error('Debug extraction failed:', debugError);
+        return new Response(JSON.stringify({
+          error: 'No .lang files found in the uploaded package',
+          details: 'Please ensure your addon contains .lang files in texts/ directory'
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
     }
 
     console.log('Found .lang files:', langFiles.map(f => f.path));
@@ -1292,6 +1315,8 @@ Translations:`;
 async function extractLangFilesFromZip(zipData: Uint8Array): Promise<Array<{path: string, content: string}>> {
   const langFiles: Array<{path: string, content: string}> = [];
 
+  console.log('Starting ZIP extraction, data length:', zipData.length);
+
   try {
     // 简单的 ZIP 文件解析（仅支持基本的 ZIP 格式）
     const view = new DataView(zipData.buffer);
@@ -1301,21 +1326,28 @@ async function extractLangFilesFromZip(zipData: Uint8Array): Promise<Array<{path
     const centralDirSignature = 0x06054b50;
     let centralDirOffset = -1;
 
+    console.log('Searching for central directory...');
+
     // 从文件末尾开始查找中央目录
     for (let i = zipData.length - 22; i >= 0; i--) {
       if (view.getUint32(i, true) === centralDirSignature) {
         centralDirOffset = view.getUint32(i + 16, true);
+        console.log('Found central directory at offset:', centralDirOffset);
         break;
       }
     }
 
     if (centralDirOffset === -1) {
+      console.error('Central directory not found');
       throw new Error('Invalid ZIP file: Central directory not found');
     }
 
     // 解析中央目录条目
     offset = centralDirOffset;
     const centralDirSignature2 = 0x02014b50;
+
+    console.log('Parsing central directory entries...');
+    let fileCount = 0;
 
     while (offset < zipData.length - 22) {
       const signature = view.getUint32(offset, true);
@@ -1330,22 +1362,32 @@ async function extractLangFilesFromZip(zipData: Uint8Array): Promise<Array<{path
       const filenameBytes = zipData.slice(offset + 46, offset + 46 + filenameLength);
       const filename = new TextDecoder().decode(filenameBytes);
 
+      fileCount++;
+      console.log(`File ${fileCount}: ${filename}`);
+
       // 检查是否是 .lang 文件且在 texts 目录下
       if (filename.toLowerCase().endsWith('.lang') &&
           (filename.includes('texts/') || filename.includes('texts\\'))) {
 
+        console.log('Found .lang file:', filename);
+
         // 读取文件内容
         const fileContent = await extractFileFromZip(zipData, localHeaderOffset);
         if (fileContent) {
+          console.log('Successfully extracted content for:', filename, 'Length:', fileContent.length);
           langFiles.push({
             path: filename,
             content: fileContent
           });
+        } else {
+          console.error('Failed to extract content for:', filename);
         }
       }
 
       offset += 46 + filenameLength + extraFieldLength + commentLength;
     }
+
+    console.log('Total files processed:', fileCount);
 
   } catch (error) {
     console.error('ZIP parsing error:', error);
@@ -1464,7 +1506,10 @@ async function extractFileFromZip(zipData: Uint8Array, localHeaderOffset: number
     const view = new DataView(zipData.buffer);
     const localSignature = 0x04034b50;
 
+    console.log('Extracting file at offset:', localHeaderOffset);
+
     if (view.getUint32(localHeaderOffset, true) !== localSignature) {
+      console.error('Invalid local header signature at offset:', localHeaderOffset);
       return null;
     }
 
@@ -1473,17 +1518,27 @@ async function extractFileFromZip(zipData: Uint8Array, localHeaderOffset: number
     const compressedSize = view.getUint32(localHeaderOffset + 18, true);
     const compressionMethod = view.getUint16(localHeaderOffset + 8, true);
 
+    console.log('File info:', { filenameLength, extraFieldLength, compressedSize, compressionMethod });
+
     const dataOffset = localHeaderOffset + 30 + filenameLength + extraFieldLength;
     const fileData = zipData.slice(dataOffset, dataOffset + compressedSize);
 
+    console.log('Data offset:', dataOffset, 'Data length:', fileData.length);
+
     if (compressionMethod === 0) {
       // 无压缩
-      return new TextDecoder().decode(fileData);
+      const content = new TextDecoder().decode(fileData);
+      console.log('Extracted content preview:', content.substring(0, 100));
+      return content;
     } else {
       // 压缩文件 - 简单处理，尝试直接解码
+      console.log('File is compressed, method:', compressionMethod);
       try {
-        return new TextDecoder().decode(fileData);
-      } catch {
+        const content = new TextDecoder().decode(fileData);
+        console.log('Extracted compressed content preview:', content.substring(0, 100));
+        return content;
+      } catch (decodeError) {
+        console.error('Failed to decode compressed file:', decodeError);
         return null;
       }
     }
