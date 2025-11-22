@@ -6,7 +6,8 @@
 
 **🚀 基于 Cloudflare Workers** - 更快、更简单、更可靠的部署方式！
 
-**🎉 重大更新** - 现已支持 .zip/.mcaddon/.mcpack 附加包格式！
+~~**🎉 重大更新** - 现已支持 .zip/.mcaddon/.mcpack 附加包格式！~~
+.zip/.mcaddon/.mcpack 附加包格式 **暂时不可用**
 
 ## ✨ 功能特性
 
