@@ -179,7 +179,7 @@ item.minecraft.apple.name=Apple
 ```
 
 **测试附加包**：
-- 上传任何包含 texts/ 目录的 .mcaddon 或 .mcpack 文件
+- 上传任何包含 `*/text/*.lang` 或 `*/texts/*.lang`（常见于含 `res` 路径）的 .mcaddon/.mcpack/.zip 文件
 - 系统会自动解压、识别、翻译其中的 .lang 语言文件
 - 在线编辑翻译结果，确认后自动重命名为 zh_CN.lang
 - 下载重新打包的完整附加包，保持原有格式

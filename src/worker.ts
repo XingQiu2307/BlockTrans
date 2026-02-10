@@ -360,7 +360,7 @@ const HTML_CONTENT = (function(): string {
                 <h4 style="color: #667eea; margin-bottom: 10px;">🚀 新功能亮点</h4>
                 <ul style="text-align: left; max-width: 600px; margin: 0 auto;">
                     <li><strong>📦 附加包支持</strong> - 直接上传 .mcaddon/.mcpack 文件</li>
-                    <li><strong>🎯 智能识别</strong> - 自动定位 res/texts/ 下的语言文件</li>
+                    <li><strong>🎯 智能识别</strong> - 自动定位 */text/*.lang 与 */texts/*.lang（常见含 res）</li>
                     <li><strong>🔄 一键处理</strong> - 上传附加包，下载翻译版本</li>
                     <li><strong>🌏 中文输出</strong> - 自动重命名为 zh_CN.lang</li>
                     <li><strong>✏️ 在线编辑</strong> - 支持翻译结果的实时修改</li>
@@ -505,7 +505,16 @@ const HTML_CONTENT = (function(): string {
 
                     if (!response.ok) {
                         updateProgress(100, '处理失败', '服务器返回错误');
-                        showNotification('翻译请求失败: ' + response.status, 'error');
+
+                        // 尝试获取详细错误信息
+                        response.json().then(function(errorData) {
+                            console.error('Server error details:', errorData);
+                            var errorMsg = errorData.error || '翻译请求失败';
+                            var details = errorData.details || errorData.message || '';
+                            showNotification(errorMsg + (details ? ': ' + details : ''), 'error');
+                        }).catch(function() {
+                            showNotification('翻译请求失败: ' + response.status, 'error');
+                        });
                         return;
                     }
 
@@ -1463,7 +1472,7 @@ async function handleTranslateZipAPI(request: Request, env: Env, corsHeaders: Re
 
         return new Response(JSON.stringify({
           error: 'No .lang files found in the uploaded package',
-          details: 'Please ensure your addon contains .lang files in texts/ directory',
+          details: 'Please ensure your addon contains .lang files in text(s) directory, usually under a path containing res',
           debug: {
             totalFiles: allFiles.length,
             fileList: allFiles.map(f => f.name).slice(0, 10) // 只显示前10个文件
@@ -1476,7 +1485,7 @@ async function handleTranslateZipAPI(request: Request, env: Env, corsHeaders: Re
         console.error('Debug extraction failed:', debugError);
         return new Response(JSON.stringify({
           error: 'No .lang files found in the uploaded package',
-          details: 'Please ensure your addon contains .lang files in texts/ directory'
+          details: 'Please ensure your addon contains .lang files in text(s) directory, usually under a path containing res'
         }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -1487,7 +1496,8 @@ async function handleTranslateZipAPI(request: Request, env: Env, corsHeaders: Re
     console.log('Found .lang files:', langFiles.map(f => f.path));
 
     // 翻译所有 .lang 文件
-    const translatedFiles = [];
+    const translatedFiles: Array<{sourcePath: string, path: string, content: string}> = [];
+    const sourceByChinesePath = new Map<string, {path: string, content: string}>();
     for (const langFile of langFiles) {
       const itemsToTranslate = parseLangFile(langFile.content);
 
@@ -1541,12 +1551,14 @@ async function handleTranslateZipAPI(request: Request, env: Env, corsHeaders: Re
         }
 
         // 将原文件路径改为中文路径
-        const chinesePath = langFile.path.replace(/\/[^\/]+\.lang$/, '/zh_CN.lang');
+        const chinesePath = toZhCnLangPath(langFile.path);
 
         translatedFiles.push({
+          sourcePath: langFile.path,
           path: chinesePath,
           content: translatedContent
         });
+        sourceByChinesePath.set(chinesePath, { path: langFile.path, content: langFile.content });
       }
     }
 
@@ -1555,11 +1567,12 @@ async function handleTranslateZipAPI(request: Request, env: Env, corsHeaders: Re
       originalFileName: file.name,
       originalFileExtension: file.name.split('.').pop()?.toLowerCase() || 'zip',
       translatedFiles: translatedFiles.map(f => ({
+        sourcePath: sourceByChinesePath.get(f.path)?.path || '',
         path: f.path,
-        originalContent: langFiles.find(lf => lf.path === f.path)?.content || '',
+        originalContent: sourceByChinesePath.get(f.path)?.content || '',
         translatedContent: f.content,
         translations: parseLangFile(f.content).map((item, index) => {
-          const originalItem = parseLangFile(langFiles.find(lf => lf.path === f.path)?.content || '')[index];
+          const originalItem = parseLangFile(sourceByChinesePath.get(f.path)?.content || '')[index];
           return {
             key: item.key,
             source: originalItem?.value || '',
@@ -1640,6 +1653,25 @@ Translations:`;
   return prompt;
 }
 
+function isPotentialAddonLangPath(filePath: string): boolean {
+  const lowerPath = filePath.toLowerCase();
+  if (!lowerPath.endsWith('.lang')) {
+    return false;
+  }
+
+  const normalizedPath = lowerPath.replace(/\\/g, '/');
+  const inTextDir = normalizedPath.includes('/text/') || normalizedPath.includes('/texts/');
+  if (!inTextDir) {
+    return false;
+  }
+
+  return true;
+}
+
+function toZhCnLangPath(filePath: string): string {
+  return filePath.replace(/[^\\/]+\.lang$/i, 'zh_CN.lang');
+}
+
 // 使用 fflate 从 ZIP 数据中提取 .lang 文件
 async function extractLangFilesFromZip(zipData: Uint8Array): Promise<Array<{path: string, content: string}>> {
   const langFiles: Array<{path: string, content: string}> = [];
@@ -1662,9 +1694,8 @@ async function extractLangFilesFromZip(zipData: Uint8Array): Promise<Array<{path
         for (const [filePath, fileData] of Object.entries(unzipped)) {
           console.log('Processing file:', filePath);
 
-          // 检查是否是 .lang 文件且在 texts 目录下
-          if (filePath.toLowerCase().endsWith('.lang') &&
-              (filePath.includes('texts/') || filePath.includes('texts\\'))) {
+          // 检查是否是附加包语言文件：支持 */text/*.lang 与 */texts/*.lang（含 res 相关路径）
+          if (isPotentialAddonLangPath(filePath)) {
 
             console.log('Found .lang file:', filePath);
 
@@ -1824,7 +1855,7 @@ async function handleRepackZipAPI(request: Request, _env: Env, corsHeaders: Reco
 
     // 准备翻译后的文件，重命名为 zh_CN.lang
     const finalTranslatedFiles = translatedFiles.map((file: any) => ({
-      path: file.path.replace(/\/[^\/]+\.lang$/, '/zh_CN.lang'),
+      path: toZhCnLangPath(file.path),
       content: file.translatedContent
     }));
 
@@ -1879,5 +1910,3 @@ async function recordTranslation(_env: Env, type: 'lang' | 'zip', count: number)
     console.error('Failed to record translation:', error);
   }
 }
-
-
