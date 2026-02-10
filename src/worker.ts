@@ -1,6 +1,6 @@
 /// <reference types="@cloudflare/workers-types" />
 
-import { unzip, zip, strFromU8, strToU8 } from 'fflate';
+import { unzip, zipSync, strFromU8, strToU8 } from 'fflate';
 
 // TypeScript 类已移除，使用前端 JavaScript 实现
 
@@ -22,16 +22,16 @@ const HTML_CONTENT = (function(): string {
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
         :root {
-            --mc-bg: #7db966;
-            --mc-bg-dark: #4f7d3f;
-            --mc-dirt: #7a4f2b;
-            --mc-dirt-dark: #5f3b21;
+            --mc-bg: #7daee8;
+            --mc-bg-dark: #4b78b3;
+            --mc-dirt: #2a4f7a;
+            --mc-dirt-dark: #203c5d;
             --mc-panel: #c6c6c6;
             --mc-panel-shadow: #555;
             --mc-panel-light: #fff;
             --mc-text: #1f1f1f;
-            --mc-accent: #3c8527;
-            --mc-accent-dark: #2f671f;
+            --mc-accent: #2e6db2;
+            --mc-accent-dark: #24578d;
             --mc-danger: #a73939;
             --mc-warn: #ad7a1f;
             --pixel-shadow: 4px 4px 0 rgba(0, 0, 0, 0.35);
@@ -82,8 +82,8 @@ const HTML_CONTENT = (function(): string {
         .logo {
             font-family: 'Press Start 2P', monospace;
             font-size: 18px;
-            color: #1d3e16;
-            text-shadow: 2px 2px 0 #a5d392;
+            color: #173a63;
+            text-shadow: 2px 2px 0 #b8d5f3;
         }
 
         .github-link {
@@ -133,8 +133,8 @@ const HTML_CONTENT = (function(): string {
         }
 
         .upload-area {
-            border: 4px dashed #1f4914;
-            background: linear-gradient(180deg, #aedf84, #98ca76);
+            border: 4px dashed #1d4372;
+            background: linear-gradient(180deg, #a9caee, #96bde8);
             text-align: center;
             padding: 28px 18px;
             cursor: pointer;
@@ -168,7 +168,7 @@ const HTML_CONTENT = (function(): string {
         .type-card-title {
             font-size: 22px;
             font-weight: 700;
-            color: #234917;
+            color: #1f4a7a;
         }
 
         .type-card-sub {
@@ -178,7 +178,38 @@ const HTML_CONTENT = (function(): string {
 
         .upload-tip { font-size: 24px; margin-bottom: 16px; }
 
-        button {
+        .alpha-toggle {
+            margin: 10px auto 14px;
+            padding: 10px 12px;
+            max-width: 620px;
+            border: 2px solid #1f4a7a;
+            background: #dbe9f9;
+            text-align: left;
+            font-size: 21px;
+            line-height: 1.3;
+        }
+
+        .alpha-toggle label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-weight: 700;
+        }
+
+        .alpha-toggle input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #2e6db2;
+        }
+
+        .alpha-note {
+            margin-top: 6px;
+            color: #2b2b2b;
+            font-size: 19px;
+        }
+
+        button, .file-trigger {
             font-family: 'VT323', monospace;
             font-size: 28px;
             line-height: 1;
@@ -186,16 +217,26 @@ const HTML_CONTENT = (function(): string {
             padding: 10px 18px 11px;
             border: 3px solid #111;
             background: var(--mc-accent);
-            box-shadow: inset -2px -2px 0 var(--mc-accent-dark), inset 2px 2px 0 #86cc6f;
+            box-shadow: inset -2px -2px 0 var(--mc-accent-dark), inset 2px 2px 0 #79ace4;
             cursor: pointer;
+            display: inline-block;
+            text-decoration: none;
         }
 
-        button:hover { filter: brightness(1.03); }
-        button:active { transform: translate(1px, 1px); }
+        button:hover, .file-trigger:hover { filter: brightness(1.03); }
+        button:active, .file-trigger:active { transform: translate(1px, 1px); }
+
+        .file-input-native {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            pointer-events: none;
+        }
 
         .result { margin-top: 20px; }
         .result-empty { text-align: center; padding: 28px; color: #3f3f3f; }
-        .result-header h3 { font-size: 34px; color: #244a16; margin-bottom: 8px; }
+        .result-header h3 { font-size: 34px; color: #1f4a7a; margin-bottom: 8px; }
         .result-header p { font-size: 24px; color: #333; margin-bottom: 12px; }
 
         table {
@@ -243,16 +284,16 @@ const HTML_CONTENT = (function(): string {
 
         .editable-input:focus, .translation-input:focus {
             outline: none;
-            border-color: #2f671f;
+            border-color: #24578d;
         }
 
-        .loading { display: none; text-align: center; margin: 22px 0; color: #1e4014; }
+        .loading { display: none; text-align: center; margin: 22px 0; color: #1f4a7a; }
         .loading-spinner {
             display: inline-block;
             width: 34px;
             height: 34px;
             border: 4px solid #d0d0d0;
-            border-top: 4px solid #2f671f;
+            border-top: 4px solid #24578d;
             animation: spin 0.8s linear infinite;
             margin-bottom: 10px;
         }
@@ -268,7 +309,7 @@ const HTML_CONTENT = (function(): string {
         #progressFill {
             height: 100%;
             width: 0;
-            background: linear-gradient(90deg, #5fc147, #4aa237);
+            background: linear-gradient(90deg, #4c8bd1, #2e6db2);
             transition: width 0.25s ease;
         }
         #progressText { font-size: 28px; margin-top: 8px; }
@@ -288,8 +329,8 @@ const HTML_CONTENT = (function(): string {
         }
 
         .btn-success {
-            background: #3c8527;
-            box-shadow: inset -2px -2px 0 #2d671d, inset 2px 2px 0 #7fcf69;
+            background: #2e6db2;
+            box-shadow: inset -2px -2px 0 #24578d, inset 2px 2px 0 #6da8e6;
         }
 
         .reset-btn {
@@ -299,7 +340,7 @@ const HTML_CONTENT = (function(): string {
             font-size: 20px;
         }
 
-        .zip-results > h3 { font-size: 34px; color: #244a16; }
+        .zip-results > h3 { font-size: 34px; color: #1f4a7a; }
         .zip-intro { color: #2f2f2f; margin-bottom: 14px; font-size: 24px; }
         .file-section {
             margin-bottom: 16px;
@@ -308,7 +349,7 @@ const HTML_CONTENT = (function(): string {
             padding: 12px;
         }
         .file-section h4 {
-            color: #234917;
+            color: #1f4a7a;
             margin-bottom: 10px;
             font-size: 25px;
             word-break: break-all;
@@ -352,7 +393,7 @@ const HTML_CONTENT = (function(): string {
             border-top: 4px solid #222;
         }
 
-        .footer h3 { color: #1e4014; margin-bottom: 10px; font-size: 36px; }
+        .footer h3 { color: #1f4a7a; margin-bottom: 10px; font-size: 36px; }
         .footer p { font-size: 24px; line-height: 1.35; }
         .feature-box {
             margin: 16px 0;
@@ -361,7 +402,7 @@ const HTML_CONTENT = (function(): string {
             background: #e6e6e6;
             text-align: left;
         }
-        .feature-box h4 { color: #234917; margin-bottom: 8px; font-size: 28px; }
+        .feature-box h4 { color: #1f4a7a; margin-bottom: 8px; font-size: 28px; }
         .feature-box ul { margin-left: 18px; }
         .feature-box li { font-size: 22px; margin-bottom: 4px; }
 
@@ -369,7 +410,7 @@ const HTML_CONTENT = (function(): string {
             display: flex;
             justify-content: center;
             gap: 12px;
-            margin: 16px 0;
+            margin: 12px 0;
             flex-wrap: wrap;
         }
 
@@ -378,7 +419,7 @@ const HTML_CONTENT = (function(): string {
             text-decoration: none;
             font-size: 24px;
             padding: 8px 10px;
-            border: 2px solid #244a16;
+            border: 2px solid #1f4a7a;
             background: #b8dba5;
         }
 
@@ -407,7 +448,7 @@ const HTML_CONTENT = (function(): string {
             th, td, .editable-input, .translation-input { font-size: 20px; }
             .footer-links { flex-direction: column; align-items: stretch; }
             .action-buttons { flex-direction: column; align-items: stretch; }
-            button { width: 100%; }
+            button, .file-trigger { width: 100%; text-align: center; }
         }
     </style>
 </head>
@@ -415,7 +456,7 @@ const HTML_CONTENT = (function(): string {
     <header class="header">
         <div class="header-content">
             <div class="logo">
-                🧱 BlockTrans
+                BlockTrans
             </div>
             <a href="https://github.com/XingQiu2307/BlockTrans" target="_blank" class="github-link">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -428,7 +469,7 @@ const HTML_CONTENT = (function(): string {
 
     <div class="main-container">
         <div class="hero">
-            <h1>🧱 BlockTrans</h1>
+            <h1>BlockTrans</h1>
             <p>AI 驱动的 Minecraft 附加包翻译工具</p>
             <p class="hero-sub">支持 .lang 文件和 .zip/.mcaddon/.mcpack 附加包</p>
         </div>
@@ -436,23 +477,30 @@ const HTML_CONTENT = (function(): string {
         <div class="container">
 
             <div class="upload-area" id="uploadArea">
-                <div class="upload-icon">📦</div>
+                <div class="upload-icon">BT</div>
                 <h3>上传文件进行翻译</h3>
                 <div class="file-types">
                         <div class="type-card">
-                            <div style="font-size: 2rem;">📄</div>
+                            <div style="font-size: 2rem;">LANG</div>
                             <div class="type-card-title">.lang 文件</div>
                             <div class="type-card-sub">单个语言文件</div>
                         </div>
                         <div class="type-card">
-                            <div style="font-size: 2rem;">📦</div>
+                            <div style="font-size: 2rem;">ZIP</div>
                             <div class="type-card-title">附加包</div>
                             <div class="type-card-sub">.zip/.mcaddon/.mcpack</div>
                         </div>
                 </div>
                 <p class="upload-tip">拖拽文件到这里，或点击按钮选择文件</p>
-                <input type="file" id="fileInput" accept=".lang,.txt,.zip,.mcaddon,.mcpack" style="display: none;">
-                <button id="selectFileBtn">📂 选择文件</button>
+                <div class="alpha-toggle">
+                    <label>
+                        <input type="checkbox" id="alphaHardcodedToggle">
+                        启用 Alpha：翻译 JSON 中 display_name 硬编码文本
+                    </label>
+                    <div class="alpha-note">仅识别严格白名单字段（如 minecraft:display_name.value），用于测试。</div>
+                </div>
+                <input type="file" id="fileInput" class="file-input-native" accept=".lang,.txt,.zip,.mcaddon,.mcpack">
+                <label id="selectFileBtn" class="file-trigger" for="fileInput">选择文件</label>
             </div>
 
             <div class="loading" id="loading">
@@ -473,33 +521,14 @@ const HTML_CONTENT = (function(): string {
     <footer class="footer">
         <div class="footer-content">
             <h3>关于 BlockTrans</h3>
-            <p>BlockTrans 是一个开源的 AI 驱动翻译工具，专为 Minecraft Bedrock Edition 设计。<br>
-            支持单个 .lang 文件和完整附加包（.zip/.mcaddon/.mcpack）的一键翻译。<br>
-            基于 Cloudflare Workers 构建，提供快速、可靠的翻译服务。</p>
-
-            <div class="feature-box">
-                <h4>🚀 新功能亮点</h4>
-                <ul>
-                    <li><strong>📦 附加包支持</strong> - 直接上传 .mcaddon/.mcpack 文件</li>
-                    <li><strong>🎯 智能识别</strong> - 自动定位 */text/*.lang 与 */texts/*.lang（常见含 res）</li>
-                    <li><strong>🔄 一键处理</strong> - 上传附加包，下载翻译版本</li>
-                    <li><strong>🌏 中文输出</strong> - 自动重命名为 zh_CN.lang</li>
-                    <li><strong>✏️ 在线编辑</strong> - 支持翻译结果的实时修改</li>
-                </ul>
-            </div>
+            <p>上传 .lang 或 .zip/.mcaddon/.mcpack，自动翻译并导出中文结果。</p>
 
             <div class="footer-links">
-                <a href="https://github.com/XingQiu2307/BlockTrans" target="_blank">📚 GitHub 仓库</a>
-                <a href="https://github.com/XingQiu2307/BlockTrans/issues" target="_blank">🐛 报告问题</a>
-                <a href="https://github.com/XingQiu2307/BlockTrans/blob/main/README.md" target="_blank">📖 使用文档</a>
-                <a href="https://vibecoding.com" target="_blank">🎵 Vibe Coding</a>
+                <a href="https://github.com/XingQiu2307/BlockTrans" target="_blank">GitHub 仓库</a>
+                <a href="https://github.com/XingQiu2307/BlockTrans/issues" target="_blank">报告问题</a>
             </div>
 
             <div class="footer-info">
-                <div id="statsDisplay">
-                    <span>👥 访问人数: <img src="https://count.getloli.com/@访问人数?name=访问人数&theme=minecraft&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto" alt="访问统计" style="vertical-align: middle; margin-left: 5px;"></span>
-                </div>
-                <p><strong>作者:</strong> XingQiu2307 | <strong>技术支持:</strong> Vibe Coding</p>
                 <p>本项目采用 GPL-3.0 开源协议 | © 2025 BlockTrans</p>
             </div>
         </div>
@@ -511,10 +540,28 @@ const HTML_CONTENT = (function(): string {
         // 获取DOM元素
         var uploadArea = document.getElementById('uploadArea');
         var fileInput = document.getElementById('fileInput');
+        var alphaHardcodedToggle = document.getElementById('alphaHardcodedToggle');
         var loading = document.getElementById('loading');
         var result = document.getElementById('result');
 
         console.log('Elements found:', uploadArea, fileInput, loading, result);
+
+        window.addEventListener('error', function(e) {
+            console.error('Runtime error:', e.error || e.message);
+            if (result) {
+                result.innerHTML = '<div class="error-box"><h3>页面脚本错误</h3><p>' + escapeHtml(String(e.message || '未知错误')) + '</p></div>';
+            }
+            if (loading) loading.style.display = 'none';
+        });
+
+        window.addEventListener('unhandledrejection', function(e) {
+            const message = e && e.reason ? (e.reason.message || String(e.reason)) : '未知错误';
+            console.error('Unhandled rejection:', e.reason);
+            if (result) {
+                result.innerHTML = '<div class="error-box"><h3>请求处理失败</h3><p>' + escapeHtml(message) + '</p></div>';
+            }
+            if (loading) loading.style.display = 'none';
+        });
 
         // 简单的文件选择功能
         function openFileDialog() {
@@ -528,34 +575,39 @@ const HTML_CONTENT = (function(): string {
 
         // 绑定点击事件
         if (uploadArea) {
-            uploadArea.addEventListener('click', openFileDialog);
+            uploadArea.addEventListener('click', function(e) {
+                // 点击原生触发器时，交给 label 的 for 机制处理，避免重复触发
+                if (e.target && (e.target.id === 'selectFileBtn' || (e.target.closest && e.target.closest('.alpha-toggle')))) return;
+                openFileDialog();
+            });
             console.log('Click event bound to uploadArea');
         } else {
             console.error('uploadArea not found');
         }
 
-        // 选择文件按钮
-        var selectFileBtn = document.getElementById('selectFileBtn');
-        if (selectFileBtn) {
-            selectFileBtn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                console.log('Select file button clicked');
-                openFileDialog();
-            });
-            console.log('Click event bound to selectFileBtn');
-        } else {
-            console.error('selectFileBtn not found');
-        }
+        // 选择文件按钮使用 label for=fileInput 原生行为，不再绑定 JS 点击事件
 
         // 文件选择
         if (fileInput) {
-            fileInput.addEventListener('change', function(e) {
+            fileInput.addEventListener('change', async function(e) {
                 console.log('File input changed');
-                if (e.target.files && e.target.files.length > 0) {
-                    console.log('File selected:', e.target.files[0].name);
-                    handleFile(e.target.files[0]);
-                } else {
+                var target = e.target;
+                var selectedFile = target && target.files && target.files.length > 0 ? target.files[0] : null;
+
+                if (!selectedFile) {
                     console.log('No files selected');
+                    return;
+                }
+
+                console.log('File selected:', selectedFile.name);
+                try {
+                    await handleFile(selectedFile);
+                } catch (err) {
+                    console.error('handleFile failed:', err);
+                    showNotification('处理文件失败: ' + (err && err.message ? err.message : '未知错误'), 'error');
+                } finally {
+                    // 允许重复选择同一个文件也能触发 change
+                    target.value = '';
                 }
             });
             console.log('Change event bound to fileInput');
@@ -563,7 +615,6 @@ const HTML_CONTENT = (function(): string {
             console.error('fileInput element not found for change event');
         }
 
-        // 处理文件
         // 处理文件
         async function handleFile(file) {
             console.log('handleFile called with:', file.name, file.size, 'bytes');
@@ -581,7 +632,7 @@ const HTML_CONTENT = (function(): string {
                 await translateContent(content, 'lang');
             } else {
                 console.log('Unsupported file format:', fileName);
-                showNotification('❌ 不支持的文件格式。请选择 .lang、.zip、.mcaddon 或 .mcpack 文件', 'error');
+                showNotification('不支持的文件格式。请选择 .lang、.zip、.mcaddon 或 .mcpack 文件', 'error');
                 return;
             }
         }
@@ -589,16 +640,18 @@ const HTML_CONTENT = (function(): string {
         // 处理 ZIP 文件
         async function handleZipFile(file) {
             try {
-                showNotification('📦 正在解析附加包...', 'info');
+                const hardcodedAlphaEnabled = !!(alphaHardcodedToggle && alphaHardcodedToggle.checked);
+                showNotification('正在解析附加包...', 'info');
 
                 const arrayBuffer = await file.arrayBuffer();
                 const formData = new FormData();
                 formData.append('file', new Blob([arrayBuffer]), file.name);
+                formData.append('enableHardcodedAlpha', hardcodedAlphaEnabled ? 'true' : 'false');
 
                 await translateContent(formData, 'zip');
             } catch (error) {
                 console.error('ZIP file processing error:', error);
-                showNotification('❌ ZIP 文件处理失败: ' + error.message, 'error');
+                showNotification('ZIP 文件处理失败: ' + error.message, 'error');
             }
         }
 
@@ -660,6 +713,16 @@ const HTML_CONTENT = (function(): string {
                         }
                         if (errorData.message) {
                             errorDetails = errorData.message;
+                        }
+                        if (errorData.code) {
+                            errorMessage = errorMessage + ' [' + errorData.code + ']';
+                        }
+                        if (errorData.upstream && errorData.upstream.body) {
+                            var upstreamBody = String(errorData.upstream.body);
+                            if (upstreamBody.length > 400) {
+                                upstreamBody = upstreamBody.slice(0, 400) + '...';
+                            }
+                            errorDetails = (errorDetails ? errorDetails + '\\n' : '') + '上游响应: ' + upstreamBody;
                         }
                     } catch (e) {
                         // 如果无法解析 JSON，使用状态文本
@@ -779,12 +842,12 @@ const HTML_CONTENT = (function(): string {
             console.log('displayResults called with', translations.length, 'translations');
 
             if (translations.length === 0) {
-                result.innerHTML = '<div class="result-empty"><h3>📝 没有找到需要翻译的内容</h3><p>请检查文件格式是否正确</p></div>';
+                result.innerHTML = '<div class="result-empty"><h3>没有找到需要翻译的内容</h3><p>请检查文件格式是否正确</p></div>';
                 return;
             }
 
             let html = '<div class="result-header">';
-            html += '<h3>✅ 翻译完成 (' + translations.length + ' 条)</h3>';
+            html += '<h3>翻译完成 (' + translations.length + ' 条)</h3>';
             html += '<p>您可以直接编辑译文，然后下载修改后的文件</p>';
             html += '</div>';
 
@@ -797,7 +860,7 @@ const HTML_CONTENT = (function(): string {
                     '<td><code class="key-chip">' + escapeHtml(item.key) + '</code></td>' +
                     '<td>' + escapeHtml(item.source) + '</td>' +
                     '<td><input type="text" class="editable-input" value="' + escapeHtml(item.translation) + '" data-key="' + escapeHtml(item.key) + '"></td>' +
-                    '<td><button class="reset-btn" data-index="' + index + '" title="重置为原始翻译">🔄</button></td>' +
+                    '<td><button class="reset-btn" data-index="' + index + '" title="重置为原始翻译">重置</button></td>' +
                 '</tr>';
             });
 
@@ -805,10 +868,10 @@ const HTML_CONTENT = (function(): string {
             html += '</div>';
 
             html += '<div class="action-buttons">';
-            html += '<button id="downloadBtn" class="btn-success">💾 下载翻译文件</button>';
-            html += '<button id="previewBtn" class="btn-secondary">👁️ 预览内容</button>';
-            html += '<button id="copyBtn" class="btn-secondary">📋 复制到剪贴板</button>';
-            html += '<button id="resetAllBtn">🔄 重置所有翻译</button>';
+            html += '<button id="downloadBtn" class="btn-success">下载翻译文件</button>';
+            html += '<button id="previewBtn" class="btn-secondary">预览内容</button>';
+            html += '<button id="copyBtn" class="btn-secondary">复制到剪贴板</button>';
+            html += '<button id="resetAllBtn">重置所有翻译</button>';
             html += '</div>';
 
             // 存储原始翻译数据
@@ -842,6 +905,8 @@ const HTML_CONTENT = (function(): string {
         function handleInputChange(e) {
             if (e.target.classList.contains('editable-input')) {
                 markAsModified(e.target);
+            } else if (e.target.classList.contains('hardcoded-translation-input')) {
+                markHardcodedAsModified(e.target);
             }
         }
 
@@ -878,6 +943,19 @@ const HTML_CONTENT = (function(): string {
                 if (item) {
                     item.translation = newValue;
                 }
+            }
+        }
+
+        function markHardcodedAsModified(input) {
+            input.style.borderColor = '#ad7a1f';
+            input.style.backgroundColor = '#fff3da';
+
+            if (!window.currentZipResult || !window.currentZipResult.hardcodedItems) {
+                return;
+            }
+            var index = parseInt(input.getAttribute('data-hardcoded-index'));
+            if (!isNaN(index) && window.currentZipResult.hardcodedItems[index]) {
+                window.currentZipResult.hardcodedItems[index].translation = input.value;
             }
         }
 
@@ -963,7 +1041,7 @@ const HTML_CONTENT = (function(): string {
             let content = '';
 
             translations.forEach(item => {
-                content += item.key + '=' + item.translation + '\n';
+                content += item.key + '=' + item.translation + '\\n';
             });
 
             return content;
@@ -983,22 +1061,7 @@ const HTML_CONTENT = (function(): string {
             var a = document.createElement('a');
             a.href = url;
 
-            // 生成带时间戳的文件名
-            var now = new Date();
-            var month = now.getMonth() + 1;
-            var date = now.getDate();
-            var hours = now.getHours();
-            var minutes = now.getMinutes();
-
-            // 手动补零
-            var monthStr = month < 10 ? '0' + month : String(month);
-            var dateStr = date < 10 ? '0' + date : String(date);
-            var hoursStr = hours < 10 ? '0' + hours : String(hours);
-            var minutesStr = minutes < 10 ? '0' + minutes : String(minutes);
-
-            var timestamp = now.getFullYear() + monthStr + dateStr + '_' + hoursStr + minutesStr;
-
-            a.download = 'translated_' + timestamp + '.lang';
+            a.download = 'zh_CN.lang';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -1013,6 +1076,11 @@ const HTML_CONTENT = (function(): string {
             var html = '<div class="zip-results">';
             html += '<h3>附加包翻译结果</h3>';
             html += '<p class="zip-intro">请检查并编辑翻译结果，确认后将重新打包为附加包</p>';
+            if (zipResult.hardcodedSummary && zipResult.hardcodedSummary.enabled) {
+                html += '<p class="zip-intro">Alpha 硬编码翻译：扫描 ' + zipResult.hardcodedSummary.scannedFiles +
+                    ' 个 JSON，命中 ' + zipResult.hardcodedSummary.matchedFields +
+                    ' 项，修改 ' + zipResult.hardcodedSummary.changedFiles + ' 个文件。</p>';
+            }
 
             // 为每个翻译文件创建编辑区域
             for (var fileIndex = 0; fileIndex < zipResult.translatedFiles.length; fileIndex++) {
@@ -1027,6 +1095,29 @@ const HTML_CONTENT = (function(): string {
                     html += '<div class="translation-key">' + escapeHtml(item.key) + '</div>';
                     html += '<div class="translation-source">' + escapeHtml(item.source) + '</div>';
                     html += '<input type="text" class="translation-input" data-file="' + fileIndex + '" data-index="' + index + '" value="' + escapeHtml(item.translation) + '">';
+                    html += '</div>';
+                }
+
+                html += '</div></div>';
+            }
+
+            if (zipResult.hardcodedItems && zipResult.hardcodedItems.length > 0) {
+                html += '<div class="file-section">';
+                html += '<h4>Alpha 硬编码翻译项（可编辑）</h4>';
+                html += '<div class="translation-grid">';
+
+                for (var hardcodedIndex = 0; hardcodedIndex < zipResult.hardcodedItems.length; hardcodedIndex++) {
+                    var hardcodedItem = zipResult.hardcodedItems[hardcodedIndex];
+                    var pointerText = '';
+                    if (Array.isArray(hardcodedItem.pointer)) {
+                        pointerText = hardcodedItem.pointer.map(function(seg) { return String(seg); }).join('.');
+                    }
+                    var hardcodedLabel = hardcodedItem.filePath + (pointerText ? ' :: ' + pointerText : '');
+
+                    html += '<div class="translation-item">';
+                    html += '<div class="translation-key">' + escapeHtml(hardcodedLabel) + '</div>';
+                    html += '<div class="translation-source">' + escapeHtml(hardcodedItem.source || '') + '</div>';
+                    html += '<input type="text" class="translation-input hardcoded-translation-input" data-hardcoded-index="' + hardcodedIndex + '" value="' + escapeHtml(hardcodedItem.translation || '') + '">';
                     html += '</div>';
                 }
 
@@ -1072,13 +1163,28 @@ const HTML_CONTENT = (function(): string {
                         var item = file.translations[index];
                         var input = document.querySelector('[data-file="' + fileIndex + '"][data-index="' + index + '"]');
                         var translation = input ? input.value : item.translation;
-                        updatedContent += item.key + '=' + translation + '\n';
+                        updatedContent += item.key + '=' + translation + '\\n';
                     }
 
                     updatedFiles.push({
                         path: file.path,
                         translatedContent: updatedContent
                     });
+                }
+
+                var updatedHardcodedItems = [];
+                if (window.currentZipResult.hardcodedItems && window.currentZipResult.hardcodedItems.length > 0) {
+                    for (var hardcodedIndex = 0; hardcodedIndex < window.currentZipResult.hardcodedItems.length; hardcodedIndex++) {
+                        var hardcodedItem = window.currentZipResult.hardcodedItems[hardcodedIndex];
+                        var hardcodedInput = document.querySelector('[data-hardcoded-index="' + hardcodedIndex + '"]');
+                        var hardcodedTranslation = hardcodedInput ? hardcodedInput.value : hardcodedItem.translation;
+                        updatedHardcodedItems.push({
+                            filePath: hardcodedItem.filePath,
+                            pointer: hardcodedItem.pointer,
+                            source: hardcodedItem.source,
+                            translation: hardcodedTranslation
+                        });
+                    }
                 }
 
                 updateProgress(50, '重新打包', '正在重新打包附加包...');
@@ -1091,7 +1197,9 @@ const HTML_CONTENT = (function(): string {
                         originalFileName: window.currentZipResult.originalFileName,
                         originalFileExtension: window.currentZipResult.originalFileExtension,
                         translatedFiles: updatedFiles,
-                        zipData: window.currentZipResult.zipData
+                        hardcodedItems: updatedHardcodedItems,
+                        zipData: window.currentZipResult.zipData,
+                        hardcodedPatches: window.currentZipResult.hardcodedPatches || []
                     })
                 }).then(function(response) {
                     updateProgress(80, '处理响应', '正在处理服务器响应...');
@@ -1295,9 +1403,11 @@ async function handleTranslateAPI(request: Request, env: Env, corsHeaders: Recor
     if (!apiKey) {
       console.error('Missing API_KEY environment variable');
       return new Response(JSON.stringify({
-        error: 'Server configuration error: API_KEY not configured',
-        details: 'Please set API_KEY as a Secret in Cloudflare Dashboard',
-        instructions: 'Go to Workers & Pages → Your Worker → Settings → Variables → Add variable (Type: Secret)'
+        error: '服务配置错误',
+        message: 'API_KEY 未配置，无法调用翻译服务',
+        code: 'CONFIG_API_KEY_MISSING',
+        details: '请在 Cloudflare Workers 的变量设置中添加 API_KEY（Secret 类型）',
+        hint: 'Workers & Pages → 你的 Worker → Settings → Variables and Secrets'
       }), {
         status: 500,
         headers: {
@@ -1383,10 +1493,15 @@ async function handleTranslateAPI(request: Request, env: Env, corsHeaders: Recor
       }
 
       return new Response(JSON.stringify({
-        error: errorMessage,
-        details: errorText || suggestions,
+        error: '上游翻译服务调用失败',
+        message: errorMessage,
+        code: 'UPSTREAM_API_ERROR',
         statusCode: aiResponse.status,
-        suggestions: suggestions
+        details: suggestions || '请检查 API 配置和网络连接',
+        upstream: {
+          status: aiResponse.status,
+          body: errorText || ''
+        }
       }), {
         status: 500,
         headers: {
@@ -1403,16 +1518,18 @@ async function handleTranslateAPI(request: Request, env: Env, corsHeaders: Recor
       throw new Error('Invalid AI API response format');
     }
 
-    const translatedTexts = aiResult.choices[0].message.content.split('\n').filter(line => line.trim());
-
-    if (translatedTexts.length !== itemsToTranslate.length) {
-      throw new Error('Mismatch between original and translated item count.');
-    }
+    const translatedTexts = await backfillMissingTranslations(
+      textsToTranslate,
+      parseTranslatedTexts(aiResult.choices[0].message.content, itemsToTranslate.length),
+      apiUrl,
+      modelName,
+      apiKey
+    );
 
     const translations = itemsToTranslate.map((item, index) => ({
       key: item.key,
       source: item.value,
-      translation: translatedTexts[index],
+      translation: ensureLeadingFormatPrefix(item.value, translatedTexts[index] || item.value),
     }));
 
     // 统计翻译次数
@@ -1426,10 +1543,18 @@ async function handleTranslateAPI(request: Request, env: Env, corsHeaders: Recor
     });
   } catch (error) {
     console.error('Translation failed:', error);
+    const errorMessage = error instanceof Error ? error.message : '未知错误';
+    const isNetworkError = /network|connection|fetch|timeout|tls|socket/i.test(errorMessage);
     return new Response(JSON.stringify({
-      error: 'Translation failed',
-      message: error instanceof Error ? error.message : 'Unknown error',
-      details: 'Please check your environment variables and API configuration'
+      error: isNetworkError ? '上游网络连接失败' : '翻译处理失败',
+      message: errorMessage,
+      code: isNetworkError ? 'UPSTREAM_NETWORK_ERROR' : 'TRANSLATE_INTERNAL_ERROR',
+      details: isNetworkError
+        ? 'Worker 与上游 API 的网络连接中断。请检查 API_URL 连通性、TLS 证书、代理或稍后重试。'
+        : '请检查环境变量、模型配置和上游 API 可用性',
+      hint: isNetworkError
+        ? '建议先用同一 API_URL 做连通性测试，确认服务端未拦截 Cloudflare 出口。'
+        : '重点检查 API_KEY / API_URL / MODEL_NAME'
     }), {
       status: 500,
       headers: {
@@ -1450,8 +1575,11 @@ async function handleTranslateZipAPI(request: Request, env: Env, corsHeaders: Re
 
     if (!apiKey) {
       return new Response(JSON.stringify({
-        error: 'Server configuration error: API_KEY not configured',
-        details: 'Please set API_KEY as a Secret in Cloudflare Dashboard'
+        error: '服务配置错误',
+        message: 'API_KEY 未配置，无法调用翻译服务',
+        code: 'CONFIG_API_KEY_MISSING',
+        details: '请在 Cloudflare Workers 的变量设置中添加 API_KEY（Secret 类型）',
+        hint: 'Workers & Pages → 你的 Worker → Settings → Variables and Secrets'
       }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -1460,6 +1588,7 @@ async function handleTranslateZipAPI(request: Request, env: Env, corsHeaders: Re
 
     const formData = await request.formData();
     const file = formData.get('file') as File;
+    const enableHardcodedAlpha = String(formData.get('enableHardcodedAlpha') || 'false') === 'true';
 
     if (!file) {
       return new Response(JSON.stringify({
@@ -1483,7 +1612,7 @@ async function handleTranslateZipAPI(request: Request, env: Env, corsHeaders: Re
 
     console.log('Extracted lang files count:', langFiles.length);
 
-    if (langFiles.length === 0) {
+    if (langFiles.length === 0 && !enableHardcodedAlpha) {
       // 尝试列出 ZIP 中的所有文件来调试
       try {
         const allFiles = await extractAllFilesFromZip(zipData);
@@ -1511,13 +1640,20 @@ async function handleTranslateZipAPI(request: Request, env: Env, corsHeaders: Re
         });
       }
     }
+    if (langFiles.length === 0 && enableHardcodedAlpha) {
+      console.log('No .lang files found, continue with alpha hardcoded translation only');
+    }
 
     console.log('Found .lang files:', langFiles.map(f => f.path));
 
-    // 翻译所有 .lang 文件
+    // 每个语言目录只选择一个源 .lang，避免多个语言文件都写成 zh_CN.lang 互相覆盖
+    const selectedLangFiles = selectSourceLangFiles(langFiles);
+    console.log('Selected source .lang files:', selectedLangFiles.map(f => f.path));
+
+    // 翻译选中的 .lang 文件
     const translatedFiles: Array<{sourcePath: string, path: string, content: string}> = [];
     const sourceByChinesePath = new Map<string, {path: string, content: string}>();
-    for (const langFile of langFiles) {
+    for (const langFile of selectedLangFiles) {
       const itemsToTranslate = parseLangFile(langFile.content);
 
       if (itemsToTranslate.length > 0) {
@@ -1541,8 +1677,14 @@ async function handleTranslateZipAPI(request: Request, env: Env, corsHeaders: Re
         if (!aiResponse.ok) {
           const errorText = await aiResponse.text();
           return new Response(JSON.stringify({
-            error: `AI API request failed with status ${aiResponse.status}`,
-            details: errorText
+            error: '上游翻译服务调用失败',
+            message: `AI API 返回状态码 ${aiResponse.status}`,
+            code: 'UPSTREAM_API_ERROR',
+            details: '请检查 API_KEY、API_URL、MODEL_NAME 或稍后重试',
+            upstream: {
+              status: aiResponse.status,
+              body: errorText || ''
+            }
           }), {
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -1555,7 +1697,13 @@ async function handleTranslateZipAPI(request: Request, env: Env, corsHeaders: Re
           throw new Error('Invalid AI API response format');
         }
 
-        const translatedTexts = aiResult.choices[0].message.content.split('\n').filter(line => line.trim());
+        const translatedTexts = await backfillMissingTranslations(
+          textsToTranslate,
+          parseTranslatedTexts(aiResult.choices[0].message.content, itemsToTranslate.length),
+          apiUrl,
+          modelName,
+          apiKey
+        );
 
         if (translatedTexts.length !== itemsToTranslate.length) {
           console.warn('Translation count mismatch for', langFile.path);
@@ -1565,7 +1713,7 @@ async function handleTranslateZipAPI(request: Request, env: Env, corsHeaders: Re
         let translatedContent = '';
         for (let index = 0; index < itemsToTranslate.length; index++) {
           const item = itemsToTranslate[index];
-          const translation = translatedTexts[index] || item.value;
+          const translation = ensureLeadingFormatPrefix(item.value, translatedTexts[index] || item.value);
           translatedContent += `${item.key}=${translation}\n`;
         }
 
@@ -1578,6 +1726,31 @@ async function handleTranslateZipAPI(request: Request, env: Env, corsHeaders: Re
           content: translatedContent
         });
         sourceByChinesePath.set(chinesePath, { path: langFile.path, content: langFile.content });
+      }
+    }
+
+    // Alpha：翻译 JSON 中严格白名单硬编码字段（默认关闭）
+    let hardcodedPatches: Array<{path: string, content: string}> = [];
+    let hardcodedItems: Array<{filePath: string, pointer: Array<string | number>, source: string, translation: string}> = [];
+    let hardcodedSummary = {
+      enabled: enableHardcodedAlpha,
+      scannedFiles: 0,
+      matchedFields: 0,
+      changedFiles: 0
+    };
+    if (enableHardcodedAlpha) {
+      try {
+        const hardcodedResult = await translateHardcodedJsonFieldsInZip(zipData, apiUrl, modelName, apiKey);
+        hardcodedPatches = hardcodedResult.patches;
+        hardcodedItems = hardcodedResult.items;
+        hardcodedSummary = {
+          enabled: true,
+          scannedFiles: hardcodedResult.scannedFiles,
+          matchedFields: hardcodedResult.matchedFields,
+          changedFiles: hardcodedResult.changedFiles
+        };
+      } catch (hardcodedError) {
+        console.warn('Hardcoded alpha translation failed:', hardcodedError);
       }
     }
 
@@ -1599,6 +1772,9 @@ async function handleTranslateZipAPI(request: Request, env: Env, corsHeaders: Re
           };
         })
       })),
+      hardcodedPatches,
+      hardcodedItems,
+      hardcodedSummary,
       zipData: Array.from(zipData) // 保存原始 ZIP 数据用于重新打包
     };
 
@@ -1617,9 +1793,15 @@ async function handleTranslateZipAPI(request: Request, env: Env, corsHeaders: Re
 
   } catch (error) {
     console.error('ZIP translation failed:', error);
+    const errorMessage = error instanceof Error ? error.message : '未知错误';
+    const isNetworkError = /network|connection|fetch|timeout|tls|socket/i.test(errorMessage);
     return new Response(JSON.stringify({
-      error: 'ZIP translation failed',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      error: isNetworkError ? '上游网络连接失败' : '压缩包翻译失败',
+      message: errorMessage,
+      code: isNetworkError ? 'UPSTREAM_NETWORK_ERROR' : 'ZIP_TRANSLATE_INTERNAL_ERROR',
+      details: isNetworkError
+        ? 'Worker 与上游 API 的网络连接中断。请检查 API_URL 连通性、TLS 证书、代理或稍后重试。'
+        : '请检查压缩包内容、语言文件路径及 API 配置'
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -1661,7 +1843,12 @@ function createTranslationPrompt(texts: string[]): string {
   const prompt = `You are a professional game translator for Minecraft.
 Translate the following English game content into Simplified Chinese.
 Maintain the style and terminology of the game.
-Return only the translated text, with each translation on a new line. Do not include the original text.
+Important: preserve all leading formatting/control prefixes in each line exactly as-is.
+Do NOT delete or alter prefixes such as section symbols and segment markers, e.g. §5, §d, §7, §l, §r, or similar marker+hex/style codes.
+Keep placeholders/tokens unchanged (such as %s, %1$s, {0}, \\n).
+Return only translated lines.
+You must keep EXACTLY the same number of output lines as input lines.
+Do not merge lines, do not split lines, do not add numbering/bullets, do not add explanations.
 
 Original Texts:
 ---
@@ -1672,6 +1859,123 @@ Translations:`;
   return prompt;
 }
 
+function parseTranslatedTexts(rawText: string, expectedCount: number): string[] {
+  const normalized = rawText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const lines = normalized.split('\n');
+
+  while (lines.length > 0 && lines[lines.length - 1].trim() === '') {
+    lines.pop();
+  }
+
+  if (lines.length === expectedCount) {
+    return lines.map(line => line.trim());
+  }
+
+  const deNumbered = lines.map(line => line.replace(/^\s*\d+[\).\s-]+/, '').trim());
+  if (deNumbered.length === expectedCount) {
+    return deNumbered;
+  }
+
+  if (deNumbered.length > expectedCount) {
+    return deNumbered.slice(0, expectedCount);
+  }
+
+  return [
+    ...deNumbered,
+    ...new Array(expectedCount - deNumbered.length).fill('')
+  ];
+}
+
+function extractLeadingFormatPrefix(text: string): string {
+  // Preserve leading Minecraft-like formatting codes such as §5, §d, §7, §l, §r and §x§R§R§G§G§B§B.
+  const match = text.match(/^((?:(?:§|¶)[0-9A-FK-ORa-fk-or]|(?:§|¶)x(?:(?:§|¶)[0-9A-Fa-f]){6})+)/);
+  return match ? match[1] : '';
+}
+
+function ensureLeadingFormatPrefix(source: string, translated: string): string {
+  const prefix = extractLeadingFormatPrefix(source);
+  if (!prefix) {
+    return translated;
+  }
+  if (translated.startsWith(prefix)) {
+    return translated;
+  }
+  return prefix + translated;
+}
+
+function hasCjk(text: string): boolean {
+  return /[\u3400-\u9FFF\uF900-\uFAFF]/.test(text);
+}
+
+function isLikelyUntranslated(source: string, translated: string): boolean {
+  const s = source.trim();
+  const t = translated.trim();
+  if (!t) return true;
+  if (t === s) {
+    return /[A-Za-z]/.test(s) && !hasCjk(s);
+  }
+  return false;
+}
+
+async function backfillMissingTranslations(
+  sources: string[],
+  translated: string[],
+  apiUrl: string,
+  modelName: string,
+  apiKey: string
+): Promise<string[]> {
+  const fixed = [...translated];
+  const missingIndexes: number[] = [];
+  for (let i = 0; i < sources.length; i++) {
+    if (isLikelyUntranslated(sources[i], fixed[i] || '')) {
+      missingIndexes.push(i);
+    }
+  }
+
+  if (missingIndexes.length === 0) {
+    return fixed;
+  }
+
+  try {
+    const missingTexts = missingIndexes.map(i => sources[i]);
+    const retryResponse = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: modelName,
+        messages: [{ role: 'user', content: createTranslationPrompt(missingTexts) }],
+        max_tokens: 2000,
+        temperature: 0.2
+      }),
+    });
+
+    if (!retryResponse.ok) {
+      return fixed;
+    }
+
+    const retryResult = await retryResponse.json() as { choices: Array<{ message: { content: string } }> };
+    if (!retryResult.choices || !retryResult.choices[0] || !retryResult.choices[0].message) {
+      return fixed;
+    }
+
+    const retried = parseTranslatedTexts(retryResult.choices[0].message.content, missingIndexes.length);
+    for (let j = 0; j < missingIndexes.length; j++) {
+      const idx = missingIndexes[j];
+      const candidate = retried[j] || '';
+      if (!isLikelyUntranslated(sources[idx], candidate)) {
+        fixed[idx] = candidate;
+      }
+    }
+  } catch (_e) {
+    // Keep original partial translations on retry failure.
+  }
+
+  return fixed;
+}
+
 function isPotentialAddonLangPath(filePath: string): boolean {
   const lowerPath = filePath.toLowerCase();
   if (!lowerPath.endsWith('.lang')) {
@@ -1679,7 +1983,11 @@ function isPotentialAddonLangPath(filePath: string): boolean {
   }
 
   const normalizedPath = lowerPath.replace(/\\/g, '/');
-  const inTextDir = normalizedPath.includes('/text/') || normalizedPath.includes('/texts/');
+  const inTextDir =
+    normalizedPath.includes('/text/') ||
+    normalizedPath.includes('/texts/') ||
+    normalizedPath.startsWith('text/') ||
+    normalizedPath.startsWith('texts/');
   if (!inTextDir) {
     return false;
   }
@@ -1689,6 +1997,379 @@ function isPotentialAddonLangPath(filePath: string): boolean {
 
 function toZhCnLangPath(filePath: string): string {
   return filePath.replace(/[^\\/]+\.lang$/i, 'zh_CN.lang');
+}
+
+function selectSourceLangFiles(files: Array<{path: string, content: string}>): Array<{path: string, content: string}> {
+  const byDir = new Map<string, Array<{path: string, content: string}>>();
+
+  for (const file of files) {
+    const normalizedPath = file.path.replace(/\\/g, '/');
+    const dir = normalizedPath.includes('/') ? normalizedPath.slice(0, normalizedPath.lastIndexOf('/')) : '';
+    if (!byDir.has(dir)) {
+      byDir.set(dir, []);
+    }
+    byDir.get(dir)!.push(file);
+  }
+
+  const selected: Array<{path: string, content: string}> = [];
+  for (const candidates of byDir.values()) {
+    if (candidates.length === 1) {
+      selected.push(candidates[0]);
+      continue;
+    }
+
+    const ranked = [...candidates].sort((a, b) => scoreLangFile(b.path) - scoreLangFile(a.path));
+    selected.push(ranked[0]);
+  }
+
+  return selected;
+}
+
+function scoreLangFile(filePath: string): number {
+  const normalizedPath = filePath.replace(/\\/g, '/').toLowerCase();
+  const fileName = normalizedPath.split('/').pop() || '';
+  const code = fileName.replace(/\.lang$/, '');
+
+  if (code === 'zh_cn') return -1000;
+  if (code === 'en_us') return 1000;
+  if (code === 'en_gb') return 900;
+  if (code === 'zh_tw') return 850;
+  if (code === 'zh_hk') return 840;
+
+  // 其他任意语言代码都支持，如 af、de_de、fr_fr
+  if (/^[a-z]{2}(_[a-z]{2})?$/.test(code)) return 700;
+
+  return 100;
+}
+
+interface HardcodedCandidate {
+  filePath: string;
+  pointer: Array<string | number>;
+  source: string;
+}
+
+interface HardcodedEditableItem {
+  filePath: string;
+  pointer: Array<string | number>;
+  source: string;
+  translation: string;
+}
+
+interface HardcodedTranslationResult {
+  patches: Array<{path: string, content: string}>;
+  items: HardcodedEditableItem[];
+  scannedFiles: number;
+  matchedFields: number;
+  changedFiles: number;
+}
+
+function isHardcodedDisplayNameKey(key: string): boolean {
+  return key === 'minecraft:display_name' || key === 'display_name';
+}
+
+function isHardcodedTranslatableText(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed || trimmed.length < 2 || trimmed.length > 160) {
+    return false;
+  }
+
+  // Must look like human-readable text.
+  if (!/[A-Za-z\u3400-\u9FFF]/.test(trimmed)) {
+    return false;
+  }
+
+  // Avoid namespace/id/path-like values.
+  if (/^[a-z0-9_.:-]+$/i.test(trimmed)) {
+    return false;
+  }
+  if (trimmed.includes('/') || trimmed.includes('\\')) {
+    return false;
+  }
+  if (/\.json$/i.test(trimmed)) {
+    return false;
+  }
+
+  return true;
+}
+
+function collectHardcodedCandidates(
+  node: unknown,
+  filePath: string,
+  pointer: Array<string | number>,
+  output: HardcodedCandidate[]
+): void {
+  if (Array.isArray(node)) {
+    for (let i = 0; i < node.length; i++) {
+      collectHardcodedCandidates(node[i], filePath, [...pointer, i], output);
+    }
+    return;
+  }
+
+  if (!node || typeof node !== 'object') {
+    return;
+  }
+
+  const record = node as Record<string, unknown>;
+  for (const [key, value] of Object.entries(record)) {
+    if (isHardcodedDisplayNameKey(key)) {
+      if (typeof value === 'string' && isHardcodedTranslatableText(value)) {
+        output.push({
+          filePath,
+          pointer: [...pointer, key],
+          source: value
+        });
+      } else if (value && typeof value === 'object' && !Array.isArray(value)) {
+        const valueObj = value as Record<string, unknown>;
+        if (typeof valueObj.value === 'string' && isHardcodedTranslatableText(valueObj.value)) {
+          output.push({
+            filePath,
+            pointer: [...pointer, key, 'value'],
+            source: valueObj.value
+          });
+        }
+      }
+    }
+
+    collectHardcodedCandidates(value, filePath, [...pointer, key], output);
+  }
+}
+
+function getValueAtPath(root: unknown, pointer: Array<string | number>): unknown {
+  let current: any = root;
+  for (const segment of pointer) {
+    if (current == null) {
+      return undefined;
+    }
+    current = current[segment as any];
+  }
+  return current;
+}
+
+function setValueAtPath(root: unknown, pointer: Array<string | number>, value: string): void {
+  let current: any = root;
+  for (let i = 0; i < pointer.length - 1; i++) {
+    const segment = pointer[i];
+    if (current == null) {
+      return;
+    }
+    current = current[segment as any];
+  }
+  const last = pointer[pointer.length - 1];
+  if (current != null) {
+    current[last as any] = value;
+  }
+}
+
+async function translateTextsInBatches(
+  texts: string[],
+  apiUrl: string,
+  modelName: string,
+  apiKey: string
+): Promise<string[]> {
+  if (texts.length === 0) {
+    return [];
+  }
+
+  const batchSize = 60;
+  const output: string[] = [];
+
+  for (let i = 0; i < texts.length; i += batchSize) {
+    const batch = texts.slice(i, i + batchSize);
+    const aiResponse = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: modelName,
+        messages: [{ role: 'user', content: createTranslationPrompt(batch) }],
+        max_tokens: 2000,
+        temperature: 0.2
+      }),
+    });
+
+    if (!aiResponse.ok) {
+      const errorText = await aiResponse.text();
+      throw new Error(`Alpha hardcoded translation failed (${aiResponse.status}): ${errorText}`);
+    }
+
+    const aiResult = await aiResponse.json() as { choices: Array<{ message: { content: string } }> };
+    if (!aiResult.choices || !aiResult.choices[0] || !aiResult.choices[0].message) {
+      throw new Error('Invalid AI response format in alpha hardcoded translation');
+    }
+
+    const parsed = parseTranslatedTexts(aiResult.choices[0].message.content, batch.length);
+    const backfilled = await backfillMissingTranslations(batch, parsed, apiUrl, modelName, apiKey);
+    output.push(...backfilled.map((line, idx) => ensureLeadingFormatPrefix(batch[idx], line || batch[idx])));
+  }
+
+  return output;
+}
+
+async function translateHardcodedJsonFieldsInZip(
+  zipData: Uint8Array,
+  apiUrl: string,
+  modelName: string,
+  apiKey: string
+): Promise<HardcodedTranslationResult> {
+  return new Promise((resolve, reject) => {
+    unzip(zipData, (err, unzipped) => {
+      if (err) {
+        reject(new Error('Failed to unzip file for hardcoded translation: ' + err.message));
+        return;
+      }
+
+      (async () => {
+        let scannedFiles = 0;
+        const candidates: HardcodedCandidate[] = [];
+        const parsedJsonMap = new Map<string, unknown>();
+
+        for (const [filePath, fileData] of Object.entries(unzipped)) {
+          if (filePath.endsWith('/') || !filePath.toLowerCase().endsWith('.json')) {
+            continue;
+          }
+
+          scannedFiles++;
+          try {
+            const content = strFromU8(fileData as Uint8Array);
+            const json = JSON.parse(content);
+            const before = candidates.length;
+            collectHardcodedCandidates(json, filePath, [], candidates);
+            if (candidates.length > before) {
+              parsedJsonMap.set(filePath, json);
+            }
+          } catch {
+            // Ignore non-standard JSON files in alpha mode.
+          }
+        }
+
+        if (candidates.length === 0) {
+          resolve({
+            patches: [],
+            items: [],
+            scannedFiles,
+            matchedFields: 0,
+            changedFiles: 0
+          });
+          return;
+        }
+
+        const uniqueSources = Array.from(new Set(candidates.map(c => c.source)));
+        const translatedUnique = await translateTextsInBatches(uniqueSources, apiUrl, modelName, apiKey);
+        const translatedMap = new Map<string, string>();
+        for (let i = 0; i < uniqueSources.length; i++) {
+          translatedMap.set(uniqueSources[i], translatedUnique[i] || uniqueSources[i]);
+        }
+
+        const changedFiles = new Set<string>();
+        const items: HardcodedEditableItem[] = [];
+        for (const candidate of candidates) {
+          const root = parsedJsonMap.get(candidate.filePath);
+          if (!root) {
+            continue;
+          }
+
+          const current = getValueAtPath(root, candidate.pointer);
+          if (typeof current !== 'string') {
+            continue;
+          }
+
+          const translated = translatedMap.get(candidate.source) || candidate.source;
+          const finalValue = ensureLeadingFormatPrefix(candidate.source, translated);
+          items.push({
+            filePath: candidate.filePath,
+            pointer: candidate.pointer,
+            source: candidate.source,
+            translation: finalValue
+          });
+          if (isLikelyUntranslated(candidate.source, finalValue)) {
+            continue;
+          }
+
+          if (finalValue !== current) {
+            setValueAtPath(root, candidate.pointer, finalValue);
+            changedFiles.add(candidate.filePath);
+          }
+        }
+
+        const patches: Array<{path: string, content: string}> = [];
+        for (const filePath of changedFiles) {
+          const root = parsedJsonMap.get(filePath);
+          if (!root) {
+            continue;
+          }
+          patches.push({
+            path: filePath,
+            content: JSON.stringify(root, null, 2) + '\n'
+          });
+        }
+
+        resolve({
+          patches,
+          items,
+          scannedFiles,
+          matchedFields: candidates.length,
+          changedFiles: changedFiles.size
+        });
+      })().catch(reject);
+    });
+  });
+}
+
+async function buildHardcodedPatchesFromItems(
+  originalZipData: Uint8Array,
+  items: Array<{filePath: string, pointer: Array<string | number>, translation: string}>
+): Promise<Array<{path: string, content: string}>> {
+  return new Promise((resolve, reject) => {
+    unzip(originalZipData, (err, unzipped) => {
+      if (err) {
+        reject(new Error('Failed to unzip file for hardcoded repack: ' + err.message));
+        return;
+      }
+
+      const byFile = new Map<string, Array<{pointer: Array<string | number>, translation: string}>>();
+      for (const item of items) {
+        if (!item || typeof item.filePath !== 'string' || !Array.isArray(item.pointer) || typeof item.translation !== 'string') {
+          continue;
+        }
+        if (!byFile.has(item.filePath)) {
+          byFile.set(item.filePath, []);
+        }
+        byFile.get(item.filePath)!.push({ pointer: item.pointer, translation: item.translation });
+      }
+
+      const patches: Array<{path: string, content: string}> = [];
+      for (const [filePath, editItems] of byFile.entries()) {
+        const raw = unzipped[filePath];
+        if (!raw) {
+          continue;
+        }
+
+        try {
+          const json = JSON.parse(strFromU8(raw as Uint8Array));
+          let changed = false;
+          for (const edit of editItems) {
+            const current = getValueAtPath(json, edit.pointer);
+            if (typeof current === 'string' && current !== edit.translation) {
+              setValueAtPath(json, edit.pointer, edit.translation);
+              changed = true;
+            }
+          }
+          if (changed) {
+            patches.push({
+              path: filePath,
+              content: JSON.stringify(json, null, 2) + '\n'
+            });
+          }
+        } catch {
+          // Ignore invalid JSON files in alpha repack.
+        }
+      }
+
+      resolve(patches);
+    });
+  });
 }
 
 // 使用 fflate 从 ZIP 数据中提取 .lang 文件
@@ -1711,7 +2392,6 @@ async function extractLangFilesFromZip(zipData: Uint8Array): Promise<Array<{path
 
         // 遍历所有文件
         for (const [filePath, fileData] of Object.entries(unzipped)) {
-          console.log('Processing file:', filePath);
 
           // 检查是否是附加包语言文件：支持 */text/*.lang 与 */texts/*.lang（含 res 相关路径）
           if (isPotentialAddonLangPath(filePath)) {
@@ -1828,17 +2508,10 @@ async function createZipWithTranslations(originalZipData: Uint8Array, translated
 
         console.log('Preparing to zip', Object.keys(newZipData).length, 'files');
 
-        // 重新打包为 ZIP
-        zip(newZipData, (zipErr: any, zipped: Uint8Array) => {
-          if (zipErr) {
-            console.error('Failed to create ZIP:', zipErr);
-            reject(new Error('Failed to create ZIP: ' + zipErr.message));
-            return;
-          }
-
-          console.log('Successfully created new ZIP, size:', zipped.length);
-          resolve(zipped);
-        });
+        // 使用同步 ZIP，避免运行时缺少 Worker 导致打包失败
+        const zipped = zipSync(newZipData, { level: 6 });
+        console.log('Successfully created new ZIP, size:', zipped.length);
+        resolve(zipped);
       });
     } catch (error) {
       console.error('Error creating ZIP with translations:', error);
@@ -1856,9 +2529,11 @@ async function handleRepackZipAPI(request: Request, _env: Env, corsHeaders: Reco
       originalFileName: string;
       originalFileExtension: string;
       translatedFiles: Array<{path: string, translatedContent: string}>;
+      hardcodedItems?: Array<{filePath: string, pointer: Array<string | number>, source?: string, translation: string}>;
+      hardcodedPatches?: Array<{path: string, content: string}>;
       zipData: number[];
     };
-    const { originalFileName, originalFileExtension, translatedFiles, zipData } = requestData;
+    const { originalFileName, originalFileExtension, translatedFiles, hardcodedItems, hardcodedPatches, zipData } = requestData;
 
     if (!zipData || !translatedFiles) {
       return new Response(JSON.stringify({
@@ -1877,9 +2552,28 @@ async function handleRepackZipAPI(request: Request, _env: Env, corsHeaders: Reco
       path: toZhCnLangPath(file.path),
       content: file.translatedContent
     }));
+    let alphaHardcodedFiles: Array<{path: string, content: string}> = [];
+    if (Array.isArray(hardcodedItems) && hardcodedItems.length > 0) {
+      alphaHardcodedFiles = await buildHardcodedPatchesFromItems(
+        originalZipData,
+        hardcodedItems
+          .filter((item: any) => item && typeof item.filePath === 'string' && Array.isArray(item.pointer) && typeof item.translation === 'string')
+          .map((item: any) => ({
+            filePath: item.filePath,
+            pointer: item.pointer,
+            translation: item.translation
+          }))
+      );
+    } else if (Array.isArray(hardcodedPatches)) {
+      alphaHardcodedFiles = hardcodedPatches
+        .filter((file: any) => file && typeof file.path === 'string' && typeof file.content === 'string')
+        .map((file: any) => ({ path: file.path, content: file.content }));
+    }
+
+    const filesToWrite = [...finalTranslatedFiles, ...alphaHardcodedFiles];
 
     // 重新打包
-    const newZipData = await createZipWithTranslations(originalZipData, finalTranslatedFiles);
+    const newZipData = await createZipWithTranslations(originalZipData, filesToWrite);
 
     // 确定输出文件名和扩展名
     const outputExtension = originalFileExtension || 'zip';
