@@ -20,193 +20,377 @@ const HTML_CONTENT = (function(): string {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BlockTrans - 方块译者</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
+        :root {
+            --mc-bg: #7db966;
+            --mc-bg-dark: #4f7d3f;
+            --mc-dirt: #7a4f2b;
+            --mc-dirt-dark: #5f3b21;
+            --mc-panel: #c6c6c6;
+            --mc-panel-shadow: #555;
+            --mc-panel-light: #fff;
+            --mc-text: #1f1f1f;
+            --mc-accent: #3c8527;
+            --mc-accent-dark: #2f671f;
+            --mc-danger: #a73939;
+            --mc-warn: #ad7a1f;
+            --pixel-shadow: 4px 4px 0 rgba(0, 0, 0, 0.35);
+        }
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'VT323', monospace;
             min-height: 100vh;
-            color: #333;
+            color: var(--mc-text);
+            background:
+                linear-gradient(180deg, rgba(255,255,255,0.08), rgba(0,0,0,0.18)),
+                repeating-linear-gradient(
+                    90deg,
+                    rgba(255,255,255,0.04) 0 2px,
+                    rgba(0,0,0,0.04) 2px 4px
+                ),
+                linear-gradient(180deg, var(--mc-bg) 0 70%, var(--mc-bg-dark) 70% 100%);
+        }
+
+        .header, .footer, .container {
+            background: var(--mc-panel);
+            border: 4px solid #222;
+            box-shadow: inset -3px -3px 0 var(--mc-panel-shadow), inset 3px 3px 0 var(--mc-panel-light), var(--pixel-shadow);
         }
 
         .header {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            padding: 15px 0;
-            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+            padding: 12px 0;
             position: sticky;
             top: 0;
             z-index: 100;
         }
 
-        .header-content {
-            max-width: 1200px;
+        .header-content, .footer-content, .main-container {
+            max-width: 1060px;
             margin: 0 auto;
+            padding: 0 16px;
+        }
+
+        .header-content {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0 20px;
+            gap: 12px;
         }
 
         .logo {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 24px;
-            font-weight: bold;
-            color: #667eea;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 18px;
+            color: #1d3e16;
+            text-shadow: 2px 2px 0 #a5d392;
         }
 
         .github-link {
-            background: #24292e;
-            color: white;
-            padding: 8px 16px;
-            border-radius: 20px;
+            color: #111;
             text-decoration: none;
-            display: flex;
+            display: inline-flex;
             align-items: center;
             gap: 8px;
-            transition: all 0.3s ease;
+            font-size: 24px;
+            padding: 8px 12px;
+            border: 3px solid #111;
+            background: #9ed0ff;
+            box-shadow: inset -2px -2px 0 #4f8fcb, inset 2px 2px 0 #d9efff;
         }
 
-        .github-link:hover {
-            background: #0366d6;
-            transform: translateY(-2px);
-        }
+        .github-link:hover { filter: brightness(0.96); }
 
-        .main-container {
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 40px 20px;
-        }
+        .main-container { padding: 26px 16px 34px; }
 
         .hero {
             text-align: center;
-            margin-bottom: 40px;
-            color: white;
+            margin-bottom: 20px;
+            color: #fff;
+            text-shadow: 2px 2px 0 rgba(0,0,0,0.45);
         }
 
         .hero h1 {
-            font-size: 3rem;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            font-family: 'Press Start 2P', monospace;
+            line-height: 1.35;
+            font-size: clamp(22px, 4vw, 42px);
+            margin-bottom: 12px;
         }
 
         .hero p {
-            font-size: 1.2rem;
-            opacity: 0.9;
-            margin-bottom: 30px;
+            font-size: clamp(24px, 2vw, 30px);
+            margin-bottom: 8px;
+        }
+
+        .hero-sub {
+            font-size: 22px;
+            opacity: 0.92;
         }
 
         .container {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            padding: 30px;
-            border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-            margin-bottom: 30px;
+            padding: 22px;
+            margin-bottom: 26px;
         }
 
         .upload-area {
-            border: 3px dashed #667eea;
-            padding: 50px;
+            border: 4px dashed #1f4914;
+            background: linear-gradient(180deg, #aedf84, #98ca76);
             text-align: center;
-            margin: 30px 0;
-            border-radius: 15px;
-            background: linear-gradient(45deg, #f8f9ff, #f0f4ff);
-            transition: all 0.3s ease;
+            padding: 28px 18px;
             cursor: pointer;
         }
 
-        .upload-area:hover, .upload-area.dragover {
-            border-color: #4f46e5;
-            background: linear-gradient(45deg, #eef2ff, #e0e7ff);
-            transform: translateY(-2px);
-        }
+        .upload-area:hover, .upload-area.dragover { filter: brightness(0.97); }
 
         .upload-icon {
-            font-size: 3rem;
-            margin-bottom: 15px;
-            color: #667eea;
+            font-size: 44px;
+            margin-bottom: 10px;
         }
+
+        .upload-area h3 { font-size: 34px; margin-bottom: 14px; }
+
+        .file-types {
+            display: flex;
+            justify-content: center;
+            gap: 14px;
+            flex-wrap: wrap;
+            margin: 14px 0 16px;
+        }
+
+        .type-card {
+            min-width: 170px;
+            border: 3px solid #222;
+            padding: 10px;
+            background: #d6d6d6;
+            box-shadow: inset -2px -2px 0 #7a7a7a, inset 2px 2px 0 #fff;
+        }
+
+        .type-card-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: #234917;
+        }
+
+        .type-card-sub {
+            color: #3d3d3d;
+            font-size: 21px;
+        }
+
+        .upload-tip { font-size: 24px; margin-bottom: 16px; }
 
         button {
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 25px;
+            font-family: 'VT323', monospace;
+            font-size: 28px;
+            line-height: 1;
+            color: #fff;
+            padding: 10px 18px 11px;
+            border: 3px solid #111;
+            background: var(--mc-accent);
+            box-shadow: inset -2px -2px 0 var(--mc-accent-dark), inset 2px 2px 0 #86cc6f;
             cursor: pointer;
-            font-size: 16px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
         }
 
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-        }
+        button:hover { filter: brightness(1.03); }
+        button:active { transform: translate(1px, 1px); }
 
-        .result { margin-top: 30px; }
+        .result { margin-top: 20px; }
+        .result-empty { text-align: center; padding: 28px; color: #3f3f3f; }
+        .result-header h3 { font-size: 34px; color: #244a16; margin-bottom: 8px; }
+        .result-header p { font-size: 24px; color: #333; margin-bottom: 12px; }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-top: 14px;
+            border: 3px solid #202020;
+            background: #efefef;
         }
 
         th, td {
-            border: none;
-            padding: 15px;
+            border: 2px solid #333;
+            padding: 10px;
             text-align: left;
-            border-bottom: 1px solid #e5e7eb;
+            vertical-align: middle;
+            font-size: 23px;
         }
 
         th {
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            color: white;
-            font-weight: 600;
+            font-weight: 700;
+            color: #fff;
+            background: var(--mc-dirt);
         }
 
-        tr:hover {
-            background: #f8f9ff;
+        tr:nth-child(even) { background: #e0e0e0; }
+
+        .key-chip {
+            display: inline-block;
+            padding: 4px 8px;
+            border: 2px solid #333;
+            background: #d6d6d6;
+            font-size: 19px;
+            word-break: break-all;
         }
 
-        .editable-input {
+        .editable-input, .translation-input {
             width: 100%;
-            border: 1px solid #e5e7eb;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 14px;
-            transition: all 0.3s ease;
+            border: 3px solid #222;
+            padding: 8px;
+            font-size: 23px;
+            font-family: 'VT323', monospace;
+            background: #fff;
+            color: #111;
         }
 
-        .editable-input:focus {
+        .editable-input:focus, .translation-input:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: #2f671f;
         }
 
-        .loading {
-            display: none;
-            text-align: center;
-            margin: 30px 0;
-            color: #667eea;
-        }
-
+        .loading { display: none; text-align: center; margin: 22px 0; color: #1e4014; }
         .loading-spinner {
             display: inline-block;
-            width: 40px;
-            height: 40px;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 15px;
+            width: 34px;
+            height: 34px;
+            border: 4px solid #d0d0d0;
+            border-top: 4px solid #2f671f;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 10px;
+        }
+
+        #progressContainer { margin: 16px auto 0; max-width: 560px; }
+        #progressBar {
+            width: 100%;
+            height: 24px;
+            border: 3px solid #1b1b1b;
+            background: #6a6a6a;
+            overflow: hidden;
+        }
+        #progressFill {
+            height: 100%;
+            width: 0;
+            background: linear-gradient(90deg, #5fc147, #4aa237);
+            transition: width 0.25s ease;
+        }
+        #progressText { font-size: 28px; margin-top: 8px; }
+        #progressDetails { font-size: 22px; color: #2f2f2f; }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 14px;
+            flex-wrap: wrap;
+        }
+
+        .btn-secondary {
+            background: #6d6d6d;
+            box-shadow: inset -2px -2px 0 #474747, inset 2px 2px 0 #a8a8a8;
+        }
+
+        .btn-success {
+            background: #3c8527;
+            box-shadow: inset -2px -2px 0 #2d671d, inset 2px 2px 0 #7fcf69;
+        }
+
+        .reset-btn {
+            background: var(--mc-danger);
+            box-shadow: inset -2px -2px 0 #7d2a2a, inset 2px 2px 0 #d17171;
+            padding: 6px 8px;
+            font-size: 20px;
+        }
+
+        .zip-results > h3 { font-size: 34px; color: #244a16; }
+        .zip-intro { color: #2f2f2f; margin-bottom: 14px; font-size: 24px; }
+        .file-section {
+            margin-bottom: 16px;
+            border: 3px solid #262626;
+            background: #dddddd;
+            padding: 12px;
+        }
+        .file-section h4 {
+            color: #234917;
+            margin-bottom: 10px;
+            font-size: 25px;
+            word-break: break-all;
+        }
+        .translation-item {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1.2fr;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .translation-key, .translation-source {
+            border: 2px solid #333;
+            background: #f0f0f0;
+            padding: 6px 8px;
+            min-height: 42px;
+            display: flex;
+            align-items: center;
+            word-break: break-all;
+            font-size: 22px;
+        }
+
+        .error-box {
+            border: 3px solid #4d1111;
+            background: #f3d3d3;
+            padding: 12px;
+            color: #2d1010;
+        }
+        .error-box h3 { color: #6f1010; margin-bottom: 8px; font-size: 32px; }
+        .error-hint {
+            margin-top: 10px;
+            border-left: 4px solid #ad7a1f;
+            background: #fff3da;
+            padding: 10px;
+        }
+        .error-hint h4 { margin-bottom: 4px; font-size: 24px; }
+
+        .footer {
+            margin-top: 30px;
+            padding: 20px 0;
+            border-top: 4px solid #222;
+        }
+
+        .footer h3 { color: #1e4014; margin-bottom: 10px; font-size: 36px; }
+        .footer p { font-size: 24px; line-height: 1.35; }
+        .feature-box {
+            margin: 16px 0;
+            padding: 14px;
+            border: 3px solid #222;
+            background: #e6e6e6;
+            text-align: left;
+        }
+        .feature-box h4 { color: #234917; margin-bottom: 8px; font-size: 28px; }
+        .feature-box ul { margin-left: 18px; }
+        .feature-box li { font-size: 22px; margin-bottom: 4px; }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin: 16px 0;
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            color: #102c0b;
+            text-decoration: none;
+            font-size: 24px;
+            padding: 8px 10px;
+            border: 2px solid #244a16;
+            background: #b8dba5;
+        }
+
+        .footer-info { color: #2a2a2a; margin-top: 10px; }
+        #statsDisplay {
+            margin: 12px auto;
+            padding: 10px;
+            border: 3px solid #222;
+            background: #d7d7d7;
+            text-align: center;
+            max-width: 520px;
+            font-size: 22px;
         }
 
         @keyframes spin {
@@ -214,76 +398,16 @@ const HTML_CONTENT = (function(): string {
             100% { transform: rotate(360deg); }
         }
 
-        .footer {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            padding: 40px 0;
-            margin-top: 50px;
-            border-top: 1px solid rgba(255,255,255,0.2);
-        }
-
-        .footer-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-            text-align: center;
-        }
-
-        .footer h3 {
-            color: #667eea;
-            margin-bottom: 15px;
-            font-size: 1.5rem;
-        }
-
-        .footer-links {
-            display: flex;
-            justify-content: center;
-            gap: 30px;
-            margin: 20px 0;
-            flex-wrap: wrap;
-        }
-
-        .footer-links a {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-
-        .footer-links a:hover {
-            color: #4f46e5;
-            transform: translateY(-2px);
-        }
-
-        .footer-info {
-            color: #666;
-            margin-top: 20px;
-            line-height: 1.6;
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            margin-top: 20px;
-            flex-wrap: wrap;
-        }
-
-        .btn-secondary {
-            background: linear-gradient(45deg, #6b7280, #9ca3af);
-        }
-
-        .btn-success {
-            background: linear-gradient(45deg, #10b981, #059669);
-        }
-
         @media (max-width: 768px) {
-            .hero h1 { font-size: 2rem; }
-            .hero p { font-size: 1rem; }
-            .container { padding: 20px; margin: 0 10px; }
-            .upload-area { padding: 30px 20px; }
-            .footer-links { flex-direction: column; gap: 15px; }
-            .action-buttons { flex-direction: column; align-items: center; }
+            .header-content { flex-direction: column; }
+            .logo { font-size: 16px; line-height: 1.5; text-align: center; }
+            .container { padding: 14px; }
+            .upload-area { padding: 20px 10px; }
+            .translation-item { grid-template-columns: 1fr; }
+            th, td, .editable-input, .translation-input { font-size: 20px; }
+            .footer-links { flex-direction: column; align-items: stretch; }
+            .action-buttons { flex-direction: column; align-items: stretch; }
+            button { width: 100%; }
         }
     </style>
 </head>
@@ -306,7 +430,7 @@ const HTML_CONTENT = (function(): string {
         <div class="hero">
             <h1>🧱 BlockTrans</h1>
             <p>AI 驱动的 Minecraft 附加包翻译工具</p>
-            <p style="font-size: 1rem; opacity: 0.8;">支持 .lang 文件和 .zip/.mcaddon/.mcpack 附加包</p>
+            <p class="hero-sub">支持 .lang 文件和 .zip/.mcaddon/.mcpack 附加包</p>
         </div>
 
         <div class="container">
@@ -314,34 +438,31 @@ const HTML_CONTENT = (function(): string {
             <div class="upload-area" id="uploadArea">
                 <div class="upload-icon">📦</div>
                 <h3>上传文件进行翻译</h3>
-                <div style="margin: 15px 0;">
-                    <div style="display: flex; justify-content: center; gap: 20px; margin-bottom: 15px; flex-wrap: wrap;">
-                        <div style="text-align: center;">
+                <div class="file-types">
+                        <div class="type-card">
                             <div style="font-size: 2rem;">📄</div>
-                            <div style="font-weight: bold; color: #667eea;">.lang 文件</div>
-                            <div style="font-size: 0.9rem; color: #666;">单个语言文件</div>
+                            <div class="type-card-title">.lang 文件</div>
+                            <div class="type-card-sub">单个语言文件</div>
                         </div>
-                        <div style="text-align: center;">
+                        <div class="type-card">
                             <div style="font-size: 2rem;">📦</div>
-                            <div style="font-weight: bold; color: #667eea;">附加包</div>
-                            <div style="font-size: 0.9rem; color: #666;">.zip/.mcaddon/.mcpack</div>
+                            <div class="type-card-title">附加包</div>
+                            <div class="type-card-sub">.zip/.mcaddon/.mcpack</div>
                         </div>
-                    </div>
                 </div>
-                <p>拖拽文件到这里，或点击按钮选择文件</p>
+                <p class="upload-tip">拖拽文件到这里，或点击按钮选择文件</p>
                 <input type="file" id="fileInput" accept=".lang,.txt,.zip,.mcaddon,.mcpack" style="display: none;">
                 <button id="selectFileBtn">📂 选择文件</button>
-                <button onclick="document.getElementById('fileInput').click()" style="margin-left: 10px; background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px;">🔧 测试选择</button>
             </div>
 
             <div class="loading" id="loading">
                 <div class="loading-spinner"></div>
-                <div id="progressContainer" style="margin: 20px 0; max-width: 400px; margin-left: auto; margin-right: auto;">
-                    <div id="progressBar" style="width: 100%; height: 20px; background: #f0f0f0; border-radius: 10px; overflow: hidden; margin: 10px 0;">
-                        <div id="progressFill" style="height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); width: 0%; transition: width 0.3s ease;"></div>
+                <div id="progressContainer">
+                    <div id="progressBar">
+                        <div id="progressFill"></div>
                     </div>
-                    <div id="progressText" style="color: #667eea; font-size: 1rem; font-weight: bold;">准备中...</div>
-                    <div id="progressDetails" style="color: #999; font-size: 0.9rem; margin-top: 5px;">正在初始化...</div>
+                    <div id="progressText">准备中...</div>
+                    <div id="progressDetails">正在初始化...</div>
                 </div>
             </div>
 
@@ -356,9 +477,9 @@ const HTML_CONTENT = (function(): string {
             支持单个 .lang 文件和完整附加包（.zip/.mcaddon/.mcpack）的一键翻译。<br>
             基于 Cloudflare Workers 构建，提供快速、可靠的翻译服务。</p>
 
-            <div style="margin: 20px 0; padding: 20px; background: rgba(102, 126, 234, 0.1); border-radius: 10px;">
-                <h4 style="color: #667eea; margin-bottom: 10px;">🚀 新功能亮点</h4>
-                <ul style="text-align: left; max-width: 600px; margin: 0 auto;">
+            <div class="feature-box">
+                <h4>🚀 新功能亮点</h4>
+                <ul>
                     <li><strong>📦 附加包支持</strong> - 直接上传 .mcaddon/.mcpack 文件</li>
                     <li><strong>🎯 智能识别</strong> - 自动定位 */text/*.lang 与 */texts/*.lang（常见含 res）</li>
                     <li><strong>🔄 一键处理</strong> - 上传附加包，下载翻译版本</li>
@@ -375,8 +496,8 @@ const HTML_CONTENT = (function(): string {
             </div>
 
             <div class="footer-info">
-                <div id="statsDisplay" style="margin: 15px 0; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 8px; text-align: center;">
-                    <span style="font-size: 0.9rem; color: #667eea;">👥 访问人数: <img src="https://count.getloli.com/@访问人数?name=访问人数&theme=minecraft&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto" alt="访问统计" style="vertical-align: middle; margin-left: 5px;"></span>
+                <div id="statsDisplay">
+                    <span>👥 访问人数: <img src="https://count.getloli.com/@访问人数?name=访问人数&theme=minecraft&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto" alt="访问统计" style="vertical-align: middle; margin-left: 5px;"></span>
                 </div>
                 <p><strong>作者:</strong> XingQiu2307 | <strong>技术支持:</strong> Vibe Coding</p>
                 <p>本项目采用 GPL-3.0 开源协议 | © 2025 BlockTrans</p>
@@ -443,106 +564,6 @@ const HTML_CONTENT = (function(): string {
         }
 
         // 处理文件
-        function handleFile(file) {
-            console.log('handleFile called with:', file.name, file.size, 'bytes');
-            var fileName = file.name.toLowerCase();
-
-            if (fileName.endsWith('.zip') || fileName.endsWith('.mcaddon') || fileName.endsWith('.mcpack')) {
-                console.log('Processing as ZIP file');
-                alert('ZIP 文件处理功能暂时禁用');
-            } else if (fileName.endsWith('.lang') || fileName.endsWith('.txt')) {
-                console.log('Processing as .lang file');
-                file.text().then(function(content) {
-                    console.log('File content length:', content.length);
-                    translateContent(content, 'lang');
-                });
-            } else {
-                console.log('Unsupported file format:', fileName);
-                alert('不支持的文件格式: ' + fileName);
-            }
-        }
-
-        // 基本的 UI 函数
-        function updateProgress(percentage, text, details) {
-            console.log('Progress: ' + percentage + '% - ' + text + ' - ' + details);
-            var progressFill = document.getElementById('progressFill');
-            var progressText = document.getElementById('progressText');
-            var progressDetails = document.getElementById('progressDetails');
-
-            if (progressFill) progressFill.style.width = percentage + '%';
-            if (progressText) progressText.textContent = text;
-            if (progressDetails) progressDetails.textContent = details;
-        }
-
-        function resetProgress() {
-            updateProgress(0, '准备中...', '正在初始化...');
-        }
-
-        function showNotification(message, type) {
-            console.log('Notification (' + (type || 'info') + '): ' + message);
-            alert(message);
-        }
-
-        // 翻译内容
-        function translateContent(content, type) {
-            console.log('translateContent called with type:', type);
-            console.log('Content length:', content.length);
-
-            if (loading) loading.style.display = 'block';
-            if (result) result.innerHTML = '';
-            resetProgress();
-
-            try {
-                updateProgress(10, '上传文件', '正在上传 .lang 文件...');
-
-                fetch('/api/translate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain' },
-                    body: content
-                }).then(function(response) {
-                    updateProgress(50, '处理响应', '正在处理服务器响应...');
-                    console.log('Response received:', response.status, response.statusText);
-
-                    if (!response.ok) {
-                        updateProgress(100, '处理失败', '服务器返回错误');
-
-                        // 尝试获取详细错误信息
-                        response.json().then(function(errorData) {
-                            console.error('Server error details:', errorData);
-                            var errorMsg = errorData.error || '翻译请求失败';
-                            var details = errorData.details || errorData.message || '';
-                            showNotification(errorMsg + (details ? ': ' + details : ''), 'error');
-                        }).catch(function() {
-                            showNotification('翻译请求失败: ' + response.status, 'error');
-                        });
-                        return;
-                    }
-
-                    return response.json();
-                }).then(function(translations) {
-                    if (translations) {
-                        updateProgress(100, '完成', '翻译完成');
-                        console.log('Translations received:', translations.length);
-                        showNotification('翻译完成，共 ' + translations.length + ' 条', 'success');
-                    }
-                }).catch(function(error) {
-                    updateProgress(100, '网络错误', error.message);
-                    console.error('Translation error:', error);
-                    showNotification('网络错误: ' + error.message, 'error');
-                }).finally(function() {
-                    setTimeout(function() {
-                        if (loading) loading.style.display = 'none';
-                    }, 1000);
-                });
-            } catch (error) {
-                console.error('Translation error:', error);
-                showNotification('翻译失败: ' + error.message, 'error');
-            }
-        }
-
-        console.log('Basic script setup complete');
-
-        /*
         // 处理文件
         async function handleFile(file) {
             console.log('handleFile called with:', file.name, file.size, 'bytes');
@@ -700,8 +721,8 @@ const HTML_CONTENT = (function(): string {
 
         // 显示错误信息
         function displayError(errorMessage, errorDetails, statusCode) {
-            var html = '<div style="background: #ffe6e6; border: 1px solid #ff9999; padding: 15px; border-radius: 5px; margin: 10px 0;">';
-            html += '<h3 style="color: #cc0000; margin-top: 0;">翻译失败</h3>';
+            var html = '<div class="error-box">';
+            html += '<h3>翻译失败</h3>';
             html += '<p><strong>错误信息:</strong> ' + errorMessage + '</p>';
 
             if (statusCode) {
@@ -713,8 +734,8 @@ const HTML_CONTENT = (function(): string {
             }
 
             // 根据错误类型提供解决建议
-            html += '<div style="background: #f0f8ff; border-left: 4px solid #0066cc; padding: 10px; margin-top: 10px;">';
-            html += '<h4 style="margin-top: 0;">可能的解决方案:</h4>';
+            html += '<div class="error-hint">';
+            html += '<h4>可能的解决方案:</h4>';
 
             if (errorMessage.includes('Missing required environment variables')) {
                 html += '<ul>';
@@ -747,7 +768,7 @@ const HTML_CONTENT = (function(): string {
             }
 
             html += '</div>';
-            html += '<button id="retryBtn" style="margin-top: 10px; background: #0066cc; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">重新尝试</button>';
+            html += '<button id="retryBtn" style="margin-top: 10px;">重新尝试</button>';
             html += '</div>';
 
             result.innerHTML = html;
@@ -758,13 +779,13 @@ const HTML_CONTENT = (function(): string {
             console.log('displayResults called with', translations.length, 'translations');
 
             if (translations.length === 0) {
-                result.innerHTML = '<div style="text-align: center; padding: 40px; color: #666;"><h3>📝 没有找到需要翻译的内容</h3><p>请检查文件格式是否正确</p></div>';
+                result.innerHTML = '<div class="result-empty"><h3>📝 没有找到需要翻译的内容</h3><p>请检查文件格式是否正确</p></div>';
                 return;
             }
 
-            let html = '<div style="margin-bottom: 20px;">';
-            html += '<h3 style="color: #667eea; margin-bottom: 15px;">✅ 翻译完成 (' + translations.length + ' 条)</h3>';
-            html += '<p style="color: #666; margin-bottom: 20px;">您可以直接编辑译文，然后下载修改后的文件</p>';
+            let html = '<div class="result-header">';
+            html += '<h3>✅ 翻译完成 (' + translations.length + ' 条)</h3>';
+            html += '<p>您可以直接编辑译文，然后下载修改后的文件</p>';
             html += '</div>';
 
             html += '<div style="overflow-x: auto;">';
@@ -773,10 +794,10 @@ const HTML_CONTENT = (function(): string {
 
             translations.forEach((item, index) => {
                 html += '<tr data-index="' + index + '">' +
-                    '<td><code style="background: #f1f5f9; padding: 4px 8px; border-radius: 4px; font-size: 12px;">' + escapeHtml(item.key) + '</code></td>' +
-                    '<td style="color: #374151;">' + escapeHtml(item.source) + '</td>' +
+                    '<td><code class="key-chip">' + escapeHtml(item.key) + '</code></td>' +
+                    '<td>' + escapeHtml(item.source) + '</td>' +
                     '<td><input type="text" class="editable-input" value="' + escapeHtml(item.translation) + '" data-key="' + escapeHtml(item.key) + '"></td>' +
-                    '<td><button class="reset-btn" data-index="' + index + '" style="background: #ef4444; padding: 4px 8px; font-size: 12px;" title="重置为原始翻译">🔄</button></td>' +
+                    '<td><button class="reset-btn" data-index="' + index + '" title="重置为原始翻译">🔄</button></td>' +
                 '</tr>';
             });
 
@@ -845,8 +866,8 @@ const HTML_CONTENT = (function(): string {
 
         // 标记为已修改
         function markAsModified(input) {
-            input.style.borderColor = '#f59e0b';
-            input.style.backgroundColor = '#fffbeb';
+            input.style.borderColor = '#ad7a1f';
+            input.style.backgroundColor = '#fff3da';
 
             // 更新当前翻译数据
             const key = input.getAttribute('data-key');
@@ -871,7 +892,7 @@ const HTML_CONTENT = (function(): string {
                 const input = document.querySelector('tr[data-index="' + index + '"] .editable-input');
                 if (input) {
                     input.value = original.translation;
-                    input.style.borderColor = '#e5e7eb';
+                    input.style.borderColor = '#222';
                     input.style.backgroundColor = 'white';
                 }
             }
@@ -991,13 +1012,13 @@ const HTML_CONTENT = (function(): string {
         function displayZipResults(zipResult) {
             var html = '<div class="zip-results">';
             html += '<h3>附加包翻译结果</h3>';
-            html += '<p style="color: #666; margin-bottom: 20px;">请检查并编辑翻译结果，确认后将重新打包为附加包</p>';
+            html += '<p class="zip-intro">请检查并编辑翻译结果，确认后将重新打包为附加包</p>';
 
             // 为每个翻译文件创建编辑区域
             for (var fileIndex = 0; fileIndex < zipResult.translatedFiles.length; fileIndex++) {
                 var file = zipResult.translatedFiles[fileIndex];
-                html += '<div class="file-section" style="margin-bottom: 30px; border: 1px solid #ddd; border-radius: 8px; padding: 20px;">';
-                html += '<h4 style="color: #667eea; margin-bottom: 15px;">' + file.path + '</h4>';
+                html += '<div class="file-section">';
+                html += '<h4>' + file.path + '</h4>';
                 html += '<div class="translation-grid">';
 
                 for (var index = 0; index < file.translations.length; index++) {
@@ -1205,8 +1226,6 @@ const HTML_CONTENT = (function(): string {
                 }, 300);
             }, 3000);
         }
-        */
-
     </script>
 </body>
 </html>`;
