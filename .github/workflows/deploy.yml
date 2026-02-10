@@ -1,12 +1,7 @@
 name: Build and Test
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+  workflow_dispatch:
 
 jobs:
   build:
@@ -57,4 +52,4 @@ jobs:
           echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Status**: ✅ Build successful" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "🚀 **Next Steps**: Deploy via Cloudflare Pages Git integration" >> $GITHUB_STEP_SUMMARY
+          echo "🚀 **Next Steps**: Deploy via Cloudflare Workers Dashboard/Git integration" >> $GITHUB_STEP_SUMMARY
